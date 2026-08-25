@@ -366,6 +366,16 @@
 const LEAGUE_ID = '1384692281021300736';
 const AVATAR = (id) => `https://sleepercdn.com/avatars/thumbs/${id}`;
 
+// Manual corrections for seasons where what actually happened in the league
+// isn't fully reflected in Sleeper's bracket data (e.g. a toilet bowl result
+// settled at the table rather than strictly by the bracket). Key is the
+// season year, value is the exact Sleeper username to force as that
+// season's Toilet Bowl "winner" (i.e. the league's last-place finisher).
+// Add more entries here any time another season needs the same treatment.
+const TOILET_BOWL_OVERRIDES = {
+  2022: 'rmitts6',
+};
+
 let SEASONS = [];         // per-season raw+derived data, chronological
 let TEAMS = new Map();     // ownerKey -> {ownerKey, name, avatar, seasons:[]}
 let GAME_ENTRIES = [];     // one entry per team-perspective per game
@@ -561,22 +571,19 @@ function processSeasons(bundles, playersById){
     const thirdGame = winnersBracket.find(g => g.p === 3);
     if(thirdGame && thirdGame.w != null) thirdKey = rosterIdToOwnerKey.get(thirdGame.w) || null;
 
-    // "Toilet Bowl" / last-place, from the losers bracket. Unlike the
-    // winners bracket (where p:1 is the highest-stakes, best-placement
-    // game), a losers/placement bracket's p:1 game decides the better pair
-    // of finishes among teams who won their way there, while a p:3 "3rd
-    // place" style game — between teams who already lost once — decides
-    // the truly worst placements. So the game that actually determines
-    // dead last is whichever placement game has the *highest* p value on
-    // record that season, and it's that game's LOSER who finishes last
-    // (its winner finishes second-to-last).
+    // "Toilet Bowl" / last-place, from the losers bracket — mirrors the
+    // winners bracket: the p:1 game's winner is treated as the season's
+    // confirmed last-place finisher (they "win" the toilet bowl), and its
+    // loser finishes second-to-last. A small number of seasons are forced
+    // to a manually-confirmed result instead — see TOILET_BOWL_OVERRIDES
+    // near the top of this script — for cases where what actually happened
+    // in the league isn't fully reflected in Sleeper's bracket data.
     let loserKey = null, secondLoserKey = null;
     const lb = losersBracket || [];
-    const placementGames = lb.filter(g => g.p != null);
-    if(placementGames.length){
-      const finalLoserGame = placementGames.reduce((m,g) => g.p > m.p ? g : m);
-      if(finalLoserGame.l != null) loserKey = rosterIdToOwnerKey.get(finalLoserGame.l) || null;
-      if(finalLoserGame.w != null) secondLoserKey = rosterIdToOwnerKey.get(finalLoserGame.w) || null;
+    const finalLoserGame = lb.find(g => g.p === 1);
+    if(finalLoserGame){
+      if(finalLoserGame.w != null) loserKey = rosterIdToOwnerKey.get(finalLoserGame.w) || null;
+      if(finalLoserGame.l != null) secondLoserKey = rosterIdToOwnerKey.get(finalLoserGame.l) || null;
     }
 
     // Playoff participants: any roster that shows up directly as t1/t2 in the
@@ -821,6 +828,18 @@ function processSeasons(bundles, playersById){
   }
 
   BENCH_BLUNDERS.sort((a,b) => b.delta - a.delta);
+  applyToiletBowlOverrides();
+}
+
+function applyToiletBowlOverrides(){
+  for(const yearStr in TOILET_BOWL_OVERRIDES){
+    const year = Number(yearStr);
+    const targetName = TOILET_BOWL_OVERRIDES[yearStr];
+    const season = SEASONS.find(s => s.year === year);
+    if(!season) continue;
+    const match = Array.from(TEAMS.values()).find(t => t.name.toLowerCase() === targetName.toLowerCase());
+    if(match) season.loserKey = match.ownerKey;
+  }
 }
 
 function pushGameEntry(teamKey, oppKey, pf, pa, season, week, isPlayoff){
