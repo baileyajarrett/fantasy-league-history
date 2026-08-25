@@ -34,7 +34,7 @@
     font-family:'IBM Plex Serif', serif;
     min-height:100vh;
   }
-  .wrap{max-width:1080px;margin:0 auto;padding:28px 500px 80px;}
+  .wrap{max-width:none;margin:0 auto;padding:28px clamp(20px, 5vw, 140px) 80px;}
 
   /* ---------- Masthead ---------- */
   .masthead{
@@ -181,7 +181,7 @@
   }
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   @media (max-width:700px){.grid-2{grid-template-columns:1fr;}}
-  @media (max-width:700px){.wrap{padding:20px 18px 60px;}}
+  @media (max-width:700px){.wrap{padding-top:20px;padding-bottom:60px;}}
 
   /* ---------- Season cards ---------- */
   .season-card .season-head{
@@ -1133,24 +1133,109 @@ function renderH2H(){
   `;
 }
 
+function pairStreaks(keyA, keyB){
+  const games = GAME_ENTRIES.filter(g => g.teamKey === keyA && g.oppKey === keyB).sort((a,b) => a.sortKey - b.sortKey);
+  let curSide=null, curLen=0, curStart=null;
+  let maxSide=null, maxLen=0, maxCtx=null;
+  for(const g of games){
+    const side = g.pf > g.pa ? 'A' : g.pf < g.pa ? 'B' : null;
+    if(side === null || side !== curSide){ curSide = side; curLen = side ? 1 : 0; curStart = side ? g : null; }
+    else { curLen++; }
+    if(side && curLen > maxLen){ maxLen = curLen; maxSide = side; maxCtx = { start: curStart, end: g }; }
+  }
+  let currentSide=null, currentLen=0;
+  for(let i=games.length-1; i>=0; i--){
+    const g = games[i];
+    const side = g.pf > g.pa ? 'A' : g.pf < g.pa ? 'B' : null;
+    if(i === games.length-1){ if(side === null) break; currentSide = side; currentLen = 1; }
+    else { if(side === currentSide){ currentLen++; } else break; }
+  }
+  return { longest: { side: maxSide, len: maxLen, ctx: maxCtx }, current: { side: currentSide, len: currentLen } };
+}
+
 function renderRivalryLog(keyA, keyB){
   if(keyA === keyB) return `<p class="muted">Pick two different teams to see their history.</p>`;
   const games = GAME_ENTRIES.filter(g => g.teamKey === keyA && g.oppKey === keyB).sort((a,b) => a.sortKey - b.sortKey);
   if(games.length === 0) return `<p class="muted">${escapeHtml(TEAMS.get(keyA).name)} and ${escapeHtml(TEAMS.get(keyB).name)} haven't played each other.</p>`;
   const rec = H2H.get(keyA).get(keyB);
+  const nameA = escapeHtml(TEAMS.get(keyA).name), nameB = escapeHtml(TEAMS.get(keyB).name);
+
+  const avgA = games.reduce((s,g) => s+g.pf, 0) / games.length;
+  const avgB = games.reduce((s,g) => s+g.pa, 0) / games.length;
+  const avgMargin = avgA - avgB;
+
+  const decided = games.filter(g => g.margin !== 0);
+  const closest = decided.slice().sort((a,b) => Math.abs(a.margin) - Math.abs(b.margin)).slice(0,3);
+  const blowouts = decided.slice().sort((a,b) => Math.abs(b.margin) - Math.abs(a.margin)).slice(0,3);
+  const domA = games.filter(g => g.margin >= 20).length;
+  const domB = games.filter(g => g.margin <= -20).length;
+
+  const streaks = pairStreaks(keyA, keyB);
+  const sideName = side => side === 'A' ? nameA : side === 'B' ? nameB : null;
+
+  const gameLine = (g) => `
+    <li>
+      <span class="who"><span class="muted">${g.season} wk${g.week}${g.isPlayoff?' (playoffs)':''}</span></span>
+      <span class="amt">${fmt1(g.pf)} &ndash; ${fmt1(g.pa)}</span>
+    </li>`;
+
   const rows = games.map(g => `
     <tr>
       <td class="num">${g.season}</td>
       <td class="num">wk${g.week}${g.isPlayoff?' (playoffs)':''}</td>
       <td class="num">${fmt1(g.pf)}</td>
       <td class="num">${fmt1(g.pa)}</td>
-      <td>${g.pf > g.pa ? `<span class="pill">${escapeHtml(TEAMS.get(keyA).name)} won</span>` : g.pf < g.pa ? `<span class="pill bad">${escapeHtml(TEAMS.get(keyB).name)} won</span>` : `<span class="pill">Tie</span>`}</td>
+      <td>${g.pf > g.pa ? `<span class="pill">${nameA} won</span>` : g.pf < g.pa ? `<span class="pill bad">${nameB} won</span>` : `<span class="pill">Tie</span>`}</td>
     </tr>`).join('');
+
   return `
     <div class="card">
-      <h3 class="card-title">${escapeHtml(TEAMS.get(keyA).name)} vs ${escapeHtml(TEAMS.get(keyB).name)} &mdash; ${rec.w}-${rec.l}${rec.t?('-'+rec.t):''}</h3>
+      <h3 class="card-title">${nameA} vs ${nameB} &mdash; ${rec.w}-${rec.l}${rec.t?('-'+rec.t):''}</h3>
+
+      <div class="stat-card-grid">
+        <div class="stat-card">
+          <div class="sc-label">Average Score</div>
+          <div class="sc-value" style="font-size:19px;">${fmt1(avgA)} &ndash; ${fmt1(avgB)}</div>
+          <div class="sc-sub">${nameA} vs ${nameB}</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Average Margin</div>
+          <div class="sc-value" style="font-size:19px;">${avgMargin>=0?'+':''}${fmt1(avgMargin)}</div>
+          <div class="sc-sub">${avgMargin>=0?nameA:nameB} on average</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Current Streak</div>
+          <div class="sc-value" style="font-size:19px;">${streaks.current.len > 0 ? streaks.current.len : '&mdash;'}</div>
+          <div class="sc-sub">${streaks.current.len > 0 ? sideName(streaks.current.side)+' has won '+streaks.current.len+' straight' : 'No streak in progress'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Longest Streak</div>
+          <div class="sc-value" style="font-size:19px;">${streaks.longest.len || '&mdash;'}</div>
+          <div class="sc-sub">${streaks.longest.len ? sideName(streaks.longest.side)+' &middot; '+streaks.longest.ctx.start.season+' wk'+streaks.longest.ctx.start.week+'\u2013'+streaks.longest.ctx.end.season+' wk'+streaks.longest.ctx.end.week : 'n/a'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Dominator (won by 20+)</div>
+          <div class="sc-value" style="font-size:19px;">${domA} &ndash; ${domB}</div>
+          <div class="sc-sub">${nameA} vs ${nameB}</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title">Closest Games</h3>
+          <ul class="record-list">${closest.map(gameLine).join('') || '<li class="muted">No decided games yet</li>'}</ul>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Biggest Blowouts</h3>
+          <ul class="record-list">${blowouts.map(gameLine).join('') || '<li class="muted">No decided games yet</li>'}</ul>
+        </div>
+      </div>
+
+      <h3 class="card-title" style="margin-top:16px;">Full Game Log</h3>
+      <div style="overflow-x:auto;">
       <table><thead><tr><th class="num">Year</th><th class="num">Week</th><th class="num">PF</th><th class="num">PA</th><th>Result</th></tr></thead>
       <tbody>${rows}</tbody></table>
+      </div>
     </div>`;
 }
 
