@@ -1,0 +1,41 @@
+name: Update League Data
+
+# Runs automatically on a schedule, and can also be triggered manually from
+# the Actions tab on GitHub (the "Run workflow" button).
+"on":
+  schedule:
+    # Every Tuesday at 8am US Eastern (13:00 UTC during the NFL season,
+    # which falls in daylight time). Cron is always in UTC — adjust the hour
+    # if you want a different local time. Format: minute hour day month weekday
+    - cron: '0 13 * * 2'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Fetch the latest league data from Sleeper
+        run: go run fetch_data.go
+
+      - name: Commit and push if the data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add league-data.json
+          if git diff --staged --quiet; then
+            echo "No changes to league-data.json — nothing to commit."
+          else
+            git commit -m "Auto-update league data"
+            git push
+          fi
