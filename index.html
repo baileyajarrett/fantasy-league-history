@@ -342,6 +342,7 @@
     <button class="tab-btn" data-tab="seasons">Seasons</button>
     <button class="tab-btn" data-tab="h2h">Head&#8209;to&#8209;Head</button>
     <button class="tab-btn" data-tab="records">Records</button>
+    <button class="tab-btn" data-tab="trends">Trends</button>
     <button class="tab-btn" data-tab="draft">Draft</button>
     <button class="tab-btn" data-tab="transactions">Transactions</button>
     <button class="tab-btn" data-tab="awards">Awards</button>
@@ -996,10 +997,15 @@ function computeStreaks(ownerKey){
 
 function seasonsForTeam(ownerKey){
   const team = TEAMS.get(ownerKey);
-  return team.seasons.slice().sort((a,b) => a.year-b.year).map(s => ({
-    year: s.year, pf: s.pf, pa: s.pa, wins: s.wins, losses: s.losses, ties: s.ties,
-    winPct: pct(s.wins, s.losses, s.ties)
-  }));
+  return team.seasons.slice().sort((a,b) => a.year-b.year).map(s => {
+    const totalGames = s.wins + s.losses + s.ties;
+    const luck = luckFor(ownerKey, s.year);
+    return {
+      year: s.year, pf: s.pf, pa: s.pa, wins: s.wins, losses: s.losses, ties: s.ties,
+      winPct: pct(s.wins, s.losses, s.ties),
+      expectedWinPct: totalGames ? luck.expectedWins/totalGames : null
+    };
+  });
 }
 
 function playoffRateFor(ownerKey){
@@ -1125,7 +1131,56 @@ function renderOverview(){
     </table>
     </div>
     <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored. "All-Play" is the record you'd have if you played every team every week &mdash; a schedule-independent read on how good a team actually was.</p>
+
+    <h2 class="section-title" style="margin-top:26px;">League Milestones Timeline</h2>
+    ${renderMilestonesTimeline()}
   `;
+}
+
+// ---- Section 7: League Milestones Timeline ----
+
+function buildMilestonesTimeline(){
+  const events = [];
+  for(const s of SEASONS){
+    if(s.championKey){
+      events.push({ year: s.year, sortKey: s.year*100+99, text: `${escapeHtml(TEAMS.get(s.championKey).name)} wins the ${s.year} championship` });
+    }
+  }
+  const ms = computeMilestones();
+  for(const m of ms.points){
+    events.push({ year: m.year, sortKey: m.sortKey, text: `${escapeHtml(TEAMS.get(m.ownerKey).name)} becomes the first to ${m.threshold.toLocaleString()} career points (wk${m.week})` });
+  }
+  for(const m of ms.wins){
+    events.push({ year: m.year, sortKey: m.sortKey, text: `${escapeHtml(TEAMS.get(m.ownerKey).name)} becomes the first to ${m.threshold} career wins (wk${m.week})` });
+  }
+  if(GAME_ENTRIES.length){
+    const highest = GAME_ENTRIES.reduce((m,g) => g.pf > m.pf ? g : m);
+    events.push({ year: highest.season, sortKey: highest.sortKey, text: `${escapeHtml(TEAMS.get(highest.teamKey).name)} sets the all-time high score: ${fmt1(highest.pf)} (wk${highest.week})` });
+    const winnersOnly = GAME_ENTRIES.filter(g => g.margin > 0);
+    if(winnersOnly.length){
+      const blowout = winnersOnly.reduce((m,g) => g.margin > m.margin ? g : m);
+      events.push({ year: blowout.season, sortKey: blowout.sortKey, text: `${escapeHtml(TEAMS.get(blowout.teamKey).name)} pulls off the biggest blowout ever, beating ${escapeHtml(TEAMS.get(blowout.oppKey).name)} by ${fmt1(blowout.margin)} (wk${blowout.week})` });
+    }
+  }
+  events.sort((a,b) => a.sortKey - b.sortKey);
+  return events;
+}
+
+function renderMilestonesTimeline(){
+  const events = buildMilestonesTimeline();
+  if(events.length === 0) return `<p class="muted">No milestones recorded yet.</p>`;
+  const byYear = new Map();
+  for(const e of events){
+    if(!byYear.has(e.year)) byYear.set(e.year, []);
+    byYear.get(e.year).push(e);
+  }
+  const years = Array.from(byYear.keys()).sort((a,b) => a-b);
+  const blocks = years.map(y => `
+    <div class="card" style="margin-bottom:10px;">
+      <h3 class="card-title">${y}</h3>
+      <ul class="record-list">${byYear.get(y).map(e => `<li><span class="who">${e.text}</span></li>`).join('')}</ul>
+    </div>`).join('');
+  return blocks;
 }
 
 function renderSeasons(){
@@ -1170,7 +1225,86 @@ function renderSeasons(){
         ${powerBlock}
       </div>`;
   }).join('');
-  return `<h2 class="section-title">Season by Season</h2>${cards}`;
+  return `<h2 class="section-title">Season by Season</h2>${cards}${renderScheduleSimulatorShell()}`;
+}
+
+// ---- Section 7: Schedule Simulator ----
+
+function weeklyLookup(year){
+  const map = new Map();
+  for(const g of GAME_ENTRIES){
+    if(g.season !== year || g.isPlayoff) continue;
+    if(!map.has(g.teamKey)) map.set(g.teamKey, new Map());
+    map.get(g.teamKey).set(g.week, g);
+  }
+  return map;
+}
+
+function simulateSchedule(year, teamAKey, teamBKey){
+  const lookup = weeklyLookup(year);
+  const aGames = lookup.get(teamAKey);
+  const bGames = lookup.get(teamBKey);
+  if(!aGames || !bGames) return null;
+  let w=0, l=0, t=0;
+  const weeks = [];
+  for(const [week, bGame] of Array.from(bGames.entries()).sort((a,b)=>a[0]-b[0])){
+    const aGame = aGames.get(week);
+    if(!aGame) continue;
+    const aScore = aGame.pf, oppScore = bGame.pa;
+    let result;
+    if(aScore > oppScore){ w++; result='W'; } else if(aScore < oppScore){ l++; result='L'; } else { t++; result='T'; }
+    weeks.push({ week, aScore, oppScore, oppKey: bGame.oppKey, result });
+  }
+  return { wins:w, losses:l, ties:t, weeks };
+}
+
+function renderScheduleSimulatorShell(){
+  const years = SEASONS.map(s => s.year).sort((a,b) => b-a);
+  if(years.length === 0) return '';
+  const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  const teamKeys = Array.from(TEAMS.keys()).sort((a,b) => TEAMS.get(a).name.localeCompare(TEAMS.get(b).name));
+  const teamOptions = teamKeys.map(k => `<option value="${k}">${escapeHtml(TEAMS.get(k).name)}</option>`).join('');
+  return `
+    <h2 class="section-title" style="margin-top:26px;">Schedule Simulator</h2>
+    <p class="muted" style="margin-bottom:12px;">What would Team A's record have been if they'd played Team B's actual schedule that season?</p>
+    <div class="select-row">
+      <select id="sim-year">${yearOptions}</select>
+      <select id="sim-teamA">${teamOptions}</select>
+      <span class="vs">with the schedule of</span>
+      <select id="sim-teamB">${teamOptions}</select>
+    </div>
+    <div id="sim-result"></div>
+  `;
+}
+
+function renderScheduleSimResult(year, teamAKey, teamBKey){
+  if(teamAKey === teamBKey) return `<p class="muted">Pick two different teams.</p>`;
+  const sim = simulateSchedule(year, teamAKey, teamBKey);
+  if(!sim) return `<p class="muted">No regular-season schedule data for one of those teams in ${year}.</p>`;
+  const actualSeason = TEAMS.get(teamAKey).seasons.find(s => s.year === year);
+  const actualRecord = actualSeason ? `${actualSeason.wins}-${actualSeason.losses}${actualSeason.ties?('-'+actualSeason.ties):''}` : 'n/a';
+
+  const rows = sim.weeks.map(w => `
+    <tr>
+      <td class="num">wk${w.week}</td>
+      <td class="num">${fmt1(w.aScore)}</td>
+      <td class="num">${fmt1(w.oppScore)}</td>
+      <td>${escapeHtml(TEAMS.get(w.oppKey).name)}</td>
+      <td>${w.result === 'W' ? '<span class="pill">Win</span>' : w.result === 'L' ? '<span class="pill bad">Loss</span>' : '<span class="pill">Tie</span>'}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card">
+      <h3 class="card-title">${escapeHtml(TEAMS.get(teamAKey).name)} with ${escapeHtml(TEAMS.get(teamBKey).name)}'s ${year} schedule</h3>
+      <div class="stat-card-grid" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="sc-label">Actual Record</div><div class="sc-value" style="font-size:20px;">${actualRecord}</div></div>
+        <div class="stat-card"><div class="sc-label">Simulated Record</div><div class="sc-value" style="font-size:20px;">${sim.wins}-${sim.losses}${sim.ties?('-'+sim.ties):''}</div></div>
+      </div>
+      <div style="overflow-x:auto;">
+      <table><thead><tr><th class="num">Week</th><th class="num">${escapeHtml(TEAMS.get(teamAKey).name)}'s Score</th><th class="num">Opponent Score</th><th>Opponent (from ${escapeHtml(TEAMS.get(teamBKey).name)}'s schedule)</th><th>Result</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
 }
 
 function renderH2H(){
@@ -1540,6 +1674,7 @@ function renderTrendChartSVG(seasons){
 
   const pfPoints = seasons.map((s,i) => `${xAt(i)},${yPF(s.pf)}`).join(' ');
   const winPoints = seasons.map((s,i) => `${xAt(i)},${yWin(s.winPct)}`).join(' ');
+  const expPoints = seasons.map((s,i) => `${xAt(i)},${yWin(s.expectedWinPct != null ? s.expectedWinPct : s.winPct)}`).join(' ');
 
   const pfDots = seasons.map((s,i) => `<circle cx="${xAt(i)}" cy="${yPF(s.pf)}" r="3.5" fill="#2F4E3D" />`).join('');
   const winDots = seasons.map((s,i) => `<circle cx="${xAt(i)}" cy="${yWin(s.winPct)}" r="3.5" fill="#E8A33D" />`).join('');
@@ -1552,6 +1687,7 @@ function renderTrendChartSVG(seasons){
     <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Points for and win percentage by season">
       <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#C9BC9C" stroke-width="1" />
       <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#C9BC9C" stroke-width="1" />
+      <polyline points="${expPoints}" fill="none" stroke="#8C3331" stroke-width="2" stroke-dasharray="5,4" opacity="0.85" />
       <polyline points="${pfPoints}" fill="none" stroke="#2F4E3D" stroke-width="2.5" />
       <polyline points="${winPoints}" fill="none" stroke="#E8A33D" stroke-width="2.5" stroke-dasharray="0" />
       ${pfDots}${winDots}${pfLabels}${winLabels}${xLabels}
@@ -1560,6 +1696,184 @@ function renderTrendChartSVG(seasons){
     <div class="trend-legend">
       <span><span class="dot" style="background:#2F4E3D;"></span>Points For</span>
       <span><span class="dot" style="background:#E8A33D;"></span>Win %</span>
+      <span><span class="dot" style="background:#8C3331;"></span>Expected Win % (dashed)</span>
+    </div>
+  `;
+}
+
+// ---- Section 3: Scoring & Parity Trends ----
+
+function renderSingleLineChartSVG(points, opts){
+  const color = (opts && opts.color) || '#2F4E3D';
+  const valueFmt = (opts && opts.valueFmt) || (v => fmt1(v));
+  if(points.length < 2) return `<p class="muted">Need at least two seasons to chart a trend.</p>`;
+  const w = Math.max(500, points.length * 80), h = 200;
+  const padL = 50, padR = 30, padT = 26, padB = 32;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const xStep = plotW/(points.length-1);
+  const values = points.map(p => p.value);
+  const rawMax = Math.max(...values), rawMin = Math.min(0, Math.min(...values));
+  const vMax = rawMax + (rawMax-rawMin)*0.15 || 1;
+  const vMin = rawMin;
+  const xAt = i => padL + i*xStep;
+  const yAt = v => padT + plotH - ((v-vMin)/((vMax-vMin)||1))*plotH;
+  const pts = points.map((p,i) => `${xAt(i)},${yAt(p.value)}`).join(' ');
+  const dots = points.map((p,i) => `<circle cx="${xAt(i)}" cy="${yAt(p.value)}" r="3.5" fill="${color}" />`).join('');
+  const labels = points.map((p,i) => `<text x="${xAt(i)}" y="${yAt(p.value)-10}" font-size="10" text-anchor="middle" fill="${color}" font-family="IBM Plex Mono, monospace">${valueFmt(p.value)}</text>`).join('');
+  const xLabels = points.map((p,i) => `<text x="${xAt(i)}" y="${h-10}" font-size="11" text-anchor="middle" fill="#1B2A3D" font-family="Big Shoulders Display, sans-serif" font-weight="700">${p.year}</text>`).join('');
+  return `
+    <div class="trend-chart-wrap">
+    <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img">
+      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#C9BC9C" stroke-width="1" />
+      <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#C9BC9C" stroke-width="1" />
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" />
+      ${dots}${labels}${xLabels}
+    </svg>
+    </div>`;
+}
+
+function renderBarChartSVG(buckets, color){
+  color = color || '#2F4E3D';
+  if(!buckets || buckets.length === 0) return `<p class="muted">No data yet.</p>`;
+  const w = Math.max(500, buckets.length * 64), h = 220;
+  const padL = 30, padR = 20, padT = 26, padB = 40;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const gap = plotW/buckets.length;
+  const barW = gap * 0.62;
+  const maxCount = Math.max(...buckets.map(b=>b.count)) || 1;
+  const bars = buckets.map((b,i) => {
+    const bh = (b.count/maxCount) * plotH;
+    const x = padL + i*gap + (gap-barW)/2;
+    const y = padT + plotH - bh;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="${color}" rx="2" />
+      <text x="${x+barW/2}" y="${y-6}" font-size="10" text-anchor="middle" fill="#1B2A3D" font-family="IBM Plex Mono, monospace">${b.count}</text>
+      <text x="${x+barW/2}" y="${h-16}" font-size="9.5" text-anchor="middle" fill="#4A5568" font-family="IBM Plex Mono, monospace">${escapeHtml(b.label)}</text>`;
+  }).join('');
+  return `<div class="trend-chart-wrap"><svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img">${bars}</svg></div>`;
+}
+
+function leagueScoringTrend(){
+  return SEASONS.map(s => {
+    const ppgList = s.standings.map(st => {
+      const games = st.wins + st.losses + st.ties;
+      return games ? st.pf/games : null;
+    }).filter(v => v != null);
+    if(ppgList.length === 0) return null;
+    return { year: s.year, value: ppgList.reduce((a,b)=>a+b,0)/ppgList.length };
+  }).filter(Boolean);
+}
+
+function leagueParityTrend(){
+  return SEASONS.map(s => {
+    const winPcts = s.standings.map(st => pct(st.wins, st.losses, st.ties));
+    if(winPcts.length < 2) return null;
+    const mean = winPcts.reduce((a,b)=>a+b,0)/winPcts.length;
+    const variance = winPcts.reduce((a,b)=>a+(b-mean)*(b-mean),0)/winPcts.length;
+    return { year: s.year, value: Math.sqrt(variance) };
+  }).filter(Boolean);
+}
+
+function parityTakeaway(trend){
+  if(trend.length < 2) return '';
+  const diff = trend[trend.length-1].value - trend[0].value;
+  if(Math.abs(diff) < 0.02) return 'Competitive balance has stayed roughly steady since the league started.';
+  return diff < 0
+    ? 'The league has gotten more competitive over time &mdash; win percentages are more tightly bunched than in the early years.'
+    : 'The league has spread out over time &mdash; win percentages are more varied than in the early years.';
+}
+
+function scoreDistribution(year){
+  const entries = year == null ? GAME_ENTRIES : GAME_ENTRIES.filter(g => g.season === year);
+  if(entries.length === 0) return [];
+  const bucketSize = 20;
+  const scores = entries.map(e => e.pf);
+  const startBucket = Math.floor(Math.min(...scores)/bucketSize) * bucketSize;
+  const endBucket = Math.ceil((Math.max(...scores)+1)/bucketSize) * bucketSize;
+  const buckets = [];
+  for(let b=startBucket; b<endBucket; b+=bucketSize){
+    buckets.push({ label: `${b}-${b+bucketSize-1}`, min:b, max:b+bucketSize, count:0 });
+  }
+  for(const s of scores){
+    const idx = Math.floor((s-startBucket)/bucketSize);
+    if(buckets[idx]) buckets[idx].count++;
+  }
+  return buckets;
+}
+
+function opponentWinPctInSeason(oppKey, year){
+  const team = TEAMS.get(oppKey);
+  if(!team) return null;
+  const s = team.seasons.find(s => s.year === year);
+  if(!s) return null;
+  return pct(s.wins, s.losses, s.ties);
+}
+
+function sosFor(ownerKey, year){
+  const games = GAME_ENTRIES.filter(g => g.teamKey === ownerKey && !g.isPlayoff && (year == null || g.season === year));
+  if(games.length === 0) return null;
+  let sum=0, count=0;
+  for(const g of games){
+    const owp = opponentWinPctInSeason(g.oppKey, g.season);
+    if(owp != null){ sum += owp; count++; }
+  }
+  return count ? sum/count : null;
+}
+
+function sosTable(year){
+  return Array.from(TEAMS.keys())
+    .map(k => ({ ownerKey:k, sos: sosFor(k, year) }))
+    .filter(r => r.sos != null)
+    .sort((a,b) => b.sos - a.sos);
+}
+
+function renderTrends(){
+  const scoring = leagueScoringTrend();
+  const parity = leagueParityTrend();
+  const years = SEASONS.map(s => s.year).sort((a,b) => b-a);
+  const options = `<option value="all">All-Time</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  return `
+    <h2 class="section-title">League Scoring Trend</h2>
+    <div class="card">
+      ${renderSingleLineChartSVG(scoring, { color:'#2F4E3D' })}
+      <p class="muted" style="margin-top:8px;">Average points scored per game, league-wide, by season.</p>
+    </div>
+
+    <h2 class="section-title" style="margin-top:26px;">Competitive Balance</h2>
+    <div class="card">
+      ${renderSingleLineChartSVG(parity, { color:'#E8A33D', valueFmt: v=>fmt3(v) })}
+      <p class="muted" style="margin-top:8px;">Standard deviation of win % across teams each season &mdash; lower means the league was more tightly bunched. ${parityTakeaway(parity)}</p>
+    </div>
+
+    <h2 class="section-title" style="margin-top:26px;">Score Distribution &amp; Strength of Schedule</h2>
+    <div class="select-row">
+      <select id="trends-year">${options}</select>
+    </div>
+    <div id="trends-content"></div>
+  `;
+}
+
+function renderTrendsContent(year){
+  const buckets = scoreDistribution(year);
+  const sos = sosTable(year);
+  const sosRows = sos.map((r,i) => `
+    <tr><td class="num">${i+1}</td><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${fmt3(r.sos)}</td></tr>`).join('');
+
+  return `
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Score Distribution${year!=null?' &middot; '+year:''}</h3>
+        ${renderBarChartSVG(buckets)}
+        <p class="muted" style="margin-top:8px;">How often teams landed in each 20-point scoring range.</p>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Strength of Schedule${year!=null?' &middot; '+year:''}</h3>
+        <div style="overflow-x:auto;">
+        <table><thead><tr><th class="num">#</th><th>Team</th><th class="num">Avg Opponent Win%</th></tr></thead>
+        <tbody>${sosRows || '<tr><td colspan="3" class="muted">No data yet</td></tr>'}</tbody></table>
+        </div>
+        <p class="muted" style="margin-top:8px;">Ranked hardest to easiest schedule, by opponents' win percentage that season. Regular season only.</p>
+      </div>
     </div>
   `;
 }
@@ -1788,6 +2102,150 @@ function renderDraftTendencies(){
     </div>`;
 }
 
+// ---- Section 4: Deeper Draft Analytics ----
+// No real market ADP is available from Sleeper, so "value" here is relative
+// to that same draft's own round average — i.e. did this pick outproduce a
+// typical pick at that draft position, in that season's scoring environment.
+
+function draftValueAnalysis(){
+  const allPicks = [];
+  for(const [year, picks] of DRAFTS.entries()){
+    const byRound = new Map();
+    for(const p of picks){
+      if(!byRound.has(p.round)) byRound.set(p.round, []);
+      byRound.get(p.round).push(p.seasonPoints);
+    }
+    const roundAvg = new Map();
+    for(const [round, ptsList] of byRound.entries()){
+      roundAvg.set(round, ptsList.reduce((a,b)=>a+b,0)/ptsList.length);
+    }
+    for(const p of picks){
+      const avg = roundAvg.get(p.round);
+      allPicks.push({ ...p, year, roundAvg: avg, valueOverAvg: p.seasonPoints - avg });
+    }
+  }
+  return allPicks;
+}
+
+function hitRateByRound(allPicks){
+  const byRound = new Map();
+  for(const p of allPicks){
+    if(!byRound.has(p.round)) byRound.set(p.round, { hits:0, total:0 });
+    const r = byRound.get(p.round);
+    r.total++; if(p.valueOverAvg > 0) r.hits++;
+  }
+  return Array.from(byRound.entries()).sort((a,b)=>a[0]-b[0]).map(([round,r]) => ({ round, hitRate: r.hits/r.total, total: r.total }));
+}
+
+function draftValueByManager(allPicks){
+  const byOwner = new Map();
+  for(const p of allPicks){
+    if(!byOwner.has(p.ownerKey)) byOwner.set(p.ownerKey, { hits:0, total:0, sumValue:0 });
+    const r = byOwner.get(p.ownerKey);
+    r.total++; r.sumValue += p.valueOverAvg; if(p.valueOverAvg > 0) r.hits++;
+  }
+  return Array.from(byOwner.entries()).map(([ownerKey,r]) => ({
+    ownerKey, hitRate: r.hits/r.total, avgValue: r.sumValue/r.total, total: r.total
+  })).sort((a,b) => b.hitRate - a.hitRate);
+}
+
+function positionRoundTendencies(){
+  const byOwner = new Map(); // ownerKey -> Map(position -> {sumRound, count})
+  for(const picks of DRAFTS.values()){
+    for(const p of picks){
+      const meta = PLAYERS.get(p.playerId);
+      if(!meta || !meta.position) continue;
+      if(!byOwner.has(p.ownerKey)) byOwner.set(p.ownerKey, new Map());
+      const m = byOwner.get(p.ownerKey);
+      if(!m.has(meta.position)) m.set(meta.position, { sumRound:0, count:0 });
+      const r = m.get(meta.position);
+      r.sumRound += p.round; r.count++;
+    }
+  }
+  return byOwner;
+}
+
+function renderDraftValueSection(){
+  const allPicks = draftValueAnalysis();
+  if(allPicks.length === 0) return '';
+  const hitRates = hitRateByRound(allPicks);
+  const byManager = draftValueByManager(allPicks);
+  const bestPicks = allPicks.slice().sort((a,b) => b.valueOverAvg - a.valueOverAvg).slice(0,5);
+  const worstPicks = allPicks.slice().sort((a,b) => a.valueOverAvg - b.valueOverAvg).slice(0,5);
+
+  const pickLine = (p) => `
+    <li>
+      <span class="who">${teamLabel(p.ownerKey,'sm')}<span class="muted">${escapeHtml(playerLabel(p.playerId))} &middot; ${p.year} round ${p.round}</span></span>
+      <span class="amt">${p.valueOverAvg>=0?'+':''}${fmt1(p.valueOverAvg)}</span>
+    </li>`;
+
+  const hitRateRows = hitRates.map(r => `
+    <tr><td class="num">Round ${r.round}</td><td class="num">${Math.round(r.hitRate*100)}%</td><td class="num">${r.total}</td></tr>`).join('');
+
+  const managerRows = byManager.map(r => `
+    <tr><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${Math.round(r.hitRate*100)}%</td><td class="num">${r.avgValue>=0?'+':''}${fmt1(r.avgValue)}</td><td class="num">${r.total}</td></tr>`).join('');
+
+  return `
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Best Picks (vs. Round Average)</h3>
+        <ul class="record-list">${bestPicks.map(pickLine).join('')}</ul>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Worst Picks (vs. Round Average)</h3>
+        <ul class="record-list">${worstPicks.map(pickLine).join('')}</ul>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Hit Rate by Round</h3>
+        <div style="overflow-x:auto;">
+        <table><thead><tr><th class="num">Round</th><th class="num">Hit Rate</th><th class="num">Picks</th></tr></thead>
+        <tbody>${hitRateRows}</tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Hit Rate by Manager</h3>
+        <div style="overflow-x:auto;">
+        <table><thead><tr><th>Team</th><th class="num">Hit Rate</th><th class="num">Avg Value</th><th class="num">Picks</th></tr></thead>
+        <tbody>${managerRows}</tbody></table>
+        </div>
+      </div>
+    </div>
+    <p class="muted">"Hit" means the pick outscored the average player taken in that round that season. No external market ADP is available, so this measures value against your own league's draft, not the wider fantasy market.</p>
+  `;
+}
+
+function renderPositionRoundTendencies(){
+  const byOwner = positionRoundTendencies();
+  if(byOwner.size === 0) return '';
+  const allPositions = new Set();
+  for(const m of byOwner.values()) for(const pos of m.keys()) allPositions.add(pos);
+  const positions = Array.from(allPositions).sort((a,b) => {
+    const ia = POSITION_ORDER.indexOf(a), ib = POSITION_ORDER.indexOf(b);
+    if(ia===-1 && ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  const header = positions.map(p => `<th class="num">${escapeHtml(p)}</th>`).join('');
+  const rows = Array.from(byOwner.keys()).sort((a,b) => TEAMS.get(a).name.localeCompare(TEAMS.get(b).name)).map(ownerKey => {
+    const m = byOwner.get(ownerKey);
+    const cells = positions.map(pos => {
+      const r = m.get(pos);
+      return `<td class="num">${r ? fmt1(r.sumRound/r.count) : '&mdash;'}</td>`;
+    }).join('');
+    return `<tr><td>${teamLabel(ownerKey,'sm')}</td>${cells}</tr>`;
+  }).join('');
+  return `
+    <div class="card">
+      <h3 class="card-title">Position Tendencies Over Time</h3>
+      <div style="overflow-x:auto;">
+      <table><thead><tr><th>Team</th>${header}</tr></thead><tbody>${rows}</tbody></table>
+      </div>
+      <p class="muted" style="margin-top:8px;">Average draft round a manager has spent on each position, across every draft on record. Lower = reaches for that position early; higher = tends to wait.</p>
+    </div>`;
+}
+
 function renderDraftBoard(year){
   const picks = DRAFTS.get(year);
   if(!picks || picks.length === 0) return `<p class="muted">No draft recorded for ${year}.</p>`;
@@ -1845,7 +2303,13 @@ function renderDraft(){
   return `
     <h2 class="section-title">Draft History</h2>
     ${renderDraftTendencies()}
-    <div class="select-row" style="margin-top:20px;">
+
+    <h2 class="section-title" style="margin-top:26px;">Draft Value &amp; Hit Rate</h2>
+    ${renderDraftValueSection()}
+    ${renderPositionRoundTendencies()}
+
+    <h2 class="section-title" style="margin-top:26px;">Draft Board</h2>
+    <div class="select-row">
       <select id="draft-year">${options}</select>
     </div>
     <p class="muted" style="margin-bottom:10px;">"pts" is total fantasy points that player produced the year they were drafted &mdash; a rough hindsight grade, independent of who ended up rostering them after trades.</p>
@@ -2115,6 +2579,7 @@ function renderHallOfShame(){
 
 const RENDERERS = {
   overview: renderOverview, seasons: renderSeasons, h2h: renderH2H, records: renderRecords,
+  trends: renderTrends,
   draft: renderDraft, transactions: renderTransactions, awards: renderAwards, shame: renderHallOfShame,
   teams: renderTeams
 };
@@ -2122,6 +2587,20 @@ const RENDERERS = {
 function showTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('content').innerHTML = RENDERERS[tab]();
+  if(tab === 'seasons'){
+    const yearSel = document.getElementById('sim-year');
+    const aSel = document.getElementById('sim-teamA');
+    const bSel = document.getElementById('sim-teamB');
+    const result = document.getElementById('sim-result');
+    if(yearSel && aSel && bSel && result){
+      if(bSel.options.length > 1) bSel.selectedIndex = 1;
+      const update = () => { result.innerHTML = renderScheduleSimResult(Number(yearSel.value), aSel.value, bSel.value); };
+      yearSel.addEventListener('change', update);
+      aSel.addEventListener('change', update);
+      bSel.addEventListener('change', update);
+      update();
+    }
+  }
   if(tab === 'teams'){
     document.getElementById('team-grid').addEventListener('click', (e) => {
       const card = e.target.closest('.team-card');
@@ -2167,6 +2646,15 @@ function showTab(tab){
       const update = () => { logEl.innerHTML = renderRivalryLog(selA.value, selB.value); };
       selA.addEventListener('change', update);
       selB.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'trends'){
+    const sel = document.getElementById('trends-year');
+    const content = document.getElementById('trends-content');
+    if(sel && content){
+      const update = () => { content.innerHTML = renderTrendsContent(sel.value === 'all' ? null : Number(sel.value)); };
+      sel.addEventListener('change', update);
       update();
     }
   }
