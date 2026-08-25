@@ -380,6 +380,7 @@ let ALL_PLAY = new Map();  // ownerKey -> Map(year -> {w,l,t}) — literal recor
 let COACHING_EFF = new Map(); // ownerKey -> Map(year -> {actualPts, optimalPts})
 let EFFICIENCY_WEEKS = []; // [{ownerKey, year, week, actualPts, optimalPts, pct}] — for record-book entries
 let PENDING_RIVALRY = null; // {a, b} — set when jumping from a team page to the H2H tab
+let PLAYER_WEEKLY_STARTS = []; // [{ownerKey, year, week, isPlayoff, playerId, position, pts}] — every started player, every week
 
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -508,6 +509,7 @@ function processSeasons(bundles, playersById){
   ALL_PLAY = new Map();
   COACHING_EFF = new Map();
   EFFICIENCY_WEEKS = [];
+  PLAYER_WEEKLY_STARTS = [];
 
   PLAYERS = new Map();
   for(const id in (playersById || {})){ PLAYERS.set(id, playersById[id]); }
@@ -632,6 +634,12 @@ function processSeasons(bundles, playersById){
           playerSeasonPoints.set(pid, (playerSeasonPoints.get(pid)||0) + pts);
           if(startersSet.has(pid)) starterList.push({ id: pid, pts });
           else { benchPts += pts; benchList.push({ id: pid, pts }); }
+        }
+        for(const s of starterList){
+          const meta = PLAYERS.get(s.id);
+          if(meta && meta.position){
+            PLAYER_WEEKLY_STARTS.push({ ownerKey, year: seasonYear, week, isPlayoff, playerId: s.id, position: meta.position, pts: s.pts });
+          }
         }
         seasonBenchTax.set(ownerKey, (seasonBenchTax.get(ownerKey)||0) + benchPts);
 
@@ -865,6 +873,74 @@ function coachingEffFor(ownerKey, year){
     actualPts = v.actualPts; optimalPts = v.optimalPts;
   }
   return { actualPts, optimalPts, pct: optimalPts > 0 ? (actualPts/optimalPts)*100 : null };
+}
+
+// ---- Section 6: Record Book expansions ----
+
+const POSITION_ORDER = ['QB','RB','WR','TE','FLEX','K','DEF','DST'];
+function positionRecords(){
+  const byPos = new Map();
+  for(const s of PLAYER_WEEKLY_STARTS){
+    if(!byPos.has(s.position)) byPos.set(s.position, []);
+    byPos.get(s.position).push(s);
+  }
+  const positions = Array.from(byPos.keys()).sort((a,b) => {
+    const ia = POSITION_ORDER.indexOf(a), ib = POSITION_ORDER.indexOf(b);
+    if(ia === -1 && ib === -1) return a.localeCompare(b);
+    if(ia === -1) return 1;
+    if(ib === -1) return -1;
+    return ia - ib;
+  });
+  return positions.map(pos => {
+    const list = byPos.get(pos);
+    const highest = list.reduce((m,c) => c.pts > m.pts ? c : m);
+    const lowest = list.reduce((m,c) => c.pts < m.pts ? c : m);
+    return { position: pos, highest, lowest };
+  });
+}
+
+const POINT_MILESTONES = [2500, 5000, 7500, 10000, 15000, 20000, 25000];
+const WIN_MILESTONES = [10, 25, 50, 75, 100, 150];
+function computeMilestones(){
+  const pointCrossings = [];
+  const winCrossings = [];
+  for(const ownerKey of TEAMS.keys()){
+    const entries = GAME_ENTRIES.filter(g => g.teamKey === ownerKey).sort((a,b) => a.sortKey - b.sortKey);
+    let cumPts = 0, cumWins = 0, pIdx = 0, wIdx = 0;
+    for(const g of entries){
+      cumPts += g.pf;
+      if(g.pf > g.pa) cumWins++;
+      while(pIdx < POINT_MILESTONES.length && cumPts >= POINT_MILESTONES[pIdx]){
+        pointCrossings.push({ ownerKey, threshold: POINT_MILESTONES[pIdx], year: g.season, week: g.week, sortKey: g.sortKey });
+        pIdx++;
+      }
+      while(wIdx < WIN_MILESTONES.length && cumWins >= WIN_MILESTONES[wIdx]){
+        winCrossings.push({ ownerKey, threshold: WIN_MILESTONES[wIdx], year: g.season, week: g.week, sortKey: g.sortKey });
+        wIdx++;
+      }
+    }
+  }
+  const firstToEach = (crossings, thresholds) => thresholds.map(t => {
+    const matches = crossings.filter(c => c.threshold === t);
+    if(matches.length === 0) return null;
+    return matches.reduce((m,c) => c.sortKey < m.sortKey ? c : m);
+  }).filter(Boolean);
+  return { points: firstToEach(pointCrossings, POINT_MILESTONES), wins: firstToEach(winCrossings, WIN_MILESTONES) };
+}
+
+function bestNonPlayoffTeamEver(){
+  let best = null;
+  for(const season of SEASONS){
+    const playoffSet = PLAYOFF_TEAMS.get(season.year);
+    if(!playoffSet) continue;
+    for(const s of season.standings){
+      if(playoffSet.has(s.ownerKey)) continue;
+      const winPct = pct(s.wins, s.losses, s.ties);
+      const candidate = { ownerKey: s.ownerKey, year: season.year, wins:s.wins, losses:s.losses, ties:s.ties, pf: s.pf, winPct };
+      if(!best || winPct > best.winPct || (winPct === best.winPct && s.pf > best.pf)) best = candidate;
+    }
+  }
+  return best;
 }
 function luckFor(ownerKey, year){
   const byYear = LUCK.get(ownerKey);
@@ -1297,6 +1373,41 @@ function renderRecords(){
       <span class="amt">${fmt1(w.pct)}%</span>
     </li>`;
 
+  // bench tax by season instance
+  const benchSeasonRows = [];
+  for(const [ownerKey, byYear] of BENCH_TAX.entries()){
+    for(const [year, val] of byYear.entries()){
+      benchSeasonRows.push({ ownerKey, year, val });
+    }
+  }
+  const worstBenchSeasons = benchSeasonRows.slice().sort((a,b) => b.val-a.val).slice(0,5);
+  const benchLine = (r) => `
+    <li>
+      <span class="who">${teamLabel(r.ownerKey,'sm')}<span class="muted">${r.year}</span></span>
+      <span class="amt">${fmt1(r.val)} pts</span>
+    </li>`;
+
+  // by-position highs and lows
+  const posRecords = positionRecords();
+  const posRows = posRecords.map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.position)}</strong></td>
+      <td>${escapeHtml(playerLabel(p.highest.playerId))}</td>
+      <td class="num">${fmt1(p.highest.pts)}</td>
+      <td>${teamLabel(p.highest.ownerKey,'sm')}<span class="muted"> &middot; ${p.highest.year} wk${p.highest.week}</span></td>
+      <td>${escapeHtml(playerLabel(p.lowest.playerId))}</td>
+      <td class="num">${fmt1(p.lowest.pts)}</td>
+    </tr>`).join('');
+
+  // milestones
+  const milestones = computeMilestones();
+  const ordinal = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+  const milestoneLine = (m) => `
+    <li>
+      <span class="who">${teamLabel(m.ownerKey,'sm')}<span class="muted">${m.year} wk${m.week}</span></span>
+      <span class="amt">${m.threshold.toLocaleString()}</span>
+    </li>`;
+
   return `
     <h2 class="section-title">The Record Book</h2>
     <div class="grid-2">
@@ -1321,6 +1432,34 @@ function renderRecords(){
         <h3 class="card-title">Best-Managed Weeks</h3>
         <ul class="record-list">${bestManagedWeeks.map(managedLine).join('') || '<li class="muted">No data yet</li>'}</ul>
         <p class="muted" style="margin-top:8px;">Closest a lineup came to scoring its own best-possible total that week.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Most Points Left on the Bench, Single Season</h3>
+      <ul class="record-list">${worstBenchSeasons.map(benchLine).join('') || '<li class="muted">No data yet</li>'}</ul>
+    </div>
+
+    ${posRecords.length ? `
+    <h2 class="section-title" style="margin-top:26px;">Highest & Lowest by Position</h2>
+    <div class="card">
+      <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Pos</th><th>Highest Starter</th><th class="num">Pts</th><th>When</th><th>Lowest Starter</th><th class="num">Pts</th></tr></thead>
+        <tbody>${posRows}</tbody>
+      </table>
+      </div>
+      <p class="muted" style="margin-top:8px;">Only counts players who were actually in the starting lineup that week.</p>
+    </div>` : ''}
+
+    <h2 class="section-title" style="margin-top:26px;">Milestones</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">First to Reach... (Career Points)</h3>
+        <ul class="record-list">${milestones.points.map(milestoneLine).join('') || '<li class="muted">No milestones reached yet</li>'}</ul>
+      </div>
+      <div class="card">
+        <h3 class="card-title">First to Reach... (Career Wins)</h3>
+        <ul class="record-list">${milestones.wins.map(milestoneLine).join('') || '<li class="muted">No milestones reached yet</li>'}</ul>
       </div>
     </div>
 
@@ -1938,6 +2077,8 @@ function renderHallOfShame(){
       <div class="shame-sub">Scored ${fmt1(w.actualPts)} of a possible ${fmt1(w.optimalPts)} (${fmt1(w.pct)}%) &mdash; ${w.year} week ${w.week}</div>
     </li>`).join('') || '<li class="muted">No data yet</li>';
 
+  const bestMissed = bestNonPlayoffTeamEver();
+
   return `
     <h2 class="section-title">Hall of Shame</h2>
     <div class="grid-2">
@@ -1959,6 +2100,16 @@ function renderHallOfShame(){
         <p class="muted" style="margin-top:8px;">Biggest gaps between what a lineup scored and the best lineup that roster could have started that week.</p>
       </div>
     </div>
+    ${bestMissed ? `
+    <div class="card">
+      <h3 class="card-title">The "What If" File: Best Team to Ever Miss the Playoffs</h3>
+      <ul class="shame-list">
+        <li>
+          <div class="shame-headline">${bestMissed.year}: ${escapeHtml(TEAMS.get(bestMissed.ownerKey).name)} was too good to be sitting at home</div>
+          <div class="shame-sub">Finished ${bestMissed.wins}-${bestMissed.losses}${bestMissed.ties?('-'+bestMissed.ties):''} (${fmt3(bestMissed.winPct)}, ${fmt1(bestMissed.pf)} pts) and still didn't make the playoffs &mdash; the best non-playoff season on record.</div>
+        </li>
+      </ul>
+    </div>` : ''}
   `;
 }
 
