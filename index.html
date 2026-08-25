@@ -151,6 +151,9 @@
     font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;margin-top:4px;line-height:1.15;
   }
   .trophy-plate .note{font-size:10.5px;color:#C9D6CC;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+  .trophy-plate.shame-plate{background:var(--oxblood);}
+  .trophy-plate.shame-plate .year{color:#F0B8B0;}
+  .trophy-plate.shame-plate .note{color:#EBD2CE;}
 
   /* ---------- Head to head grid ---------- */
   .h2h-scroll{overflow-x:auto;}
@@ -517,7 +520,7 @@ function processSeasons(bundles, playersById){
   TRANSACTIONS_LOG = new Map();
 
   for(const bundle of bundles){
-    const { league, users, rosters, winnersBracket, weeks, transactions, draftPicks } = bundle;
+    const { league, users, rosters, winnersBracket, losersBracket, weeks, transactions, draftPicks } = bundle;
     const seasonYear = Number(league.season);
     const userById = new Map(users.map(u => [u.user_id, u]));
     const rosterIdToOwnerKey = new Map();
@@ -527,7 +530,7 @@ function processSeasons(bundles, playersById){
       const ownerKey = ownerKeyFor(roster.owner_id, roster.roster_id);
       rosterIdToOwnerKey.set(roster.roster_id, ownerKey);
       const user = roster.owner_id ? userById.get(roster.owner_id) : null;
-      const teamName = (user && (user.metadata && user.metadata.team_name)) || (user && user.display_name) || `Team ${roster.roster_id}`;
+      const teamName = (user && user.display_name) || (user && (user.metadata && user.metadata.team_name)) || `Team ${roster.roster_id}`;
       const avatar = (user && user.metadata && user.metadata.avatar) ? user.metadata.avatar
                     : (user && user.avatar) ? AVATAR(user.avatar) : null;
 
@@ -557,6 +560,20 @@ function processSeasons(bundles, playersById){
     }
     const thirdGame = winnersBracket.find(g => g.p === 3);
     if(thirdGame && thirdGame.w != null) thirdKey = rosterIdToOwnerKey.get(thirdGame.w) || null;
+
+    // "Toilet Bowl" / last-place, from the losers bracket — mirrors the
+    // winners bracket exactly: the final game's winner is confirmed as the
+    // season's worst team (they "win" the toilet bowl), the loser of that
+    // game finishes second-to-last. This assumes Sleeper's losers_bracket
+    // is structured symmetrically to winners_bracket; if your league's
+    // toilet bowl comes out backwards, swap `.w`/`.l` below.
+    let loserKey = null, secondLoserKey = null;
+    const lb = losersBracket || [];
+    const finalLoserGame = lb.find(g => g.p === 1);
+    if(finalLoserGame){
+      if(finalLoserGame.w != null) loserKey = rosterIdToOwnerKey.get(finalLoserGame.w) || null;
+      if(finalLoserGame.l != null) secondLoserKey = rosterIdToOwnerKey.get(finalLoserGame.l) || null;
+    }
 
     // Playoff participants: any roster that shows up directly as t1/t2 in the
     // bracket (first-round seeds). Used for the "missed the playoffs by a
@@ -791,7 +808,7 @@ function processSeasons(bundles, playersById){
       name: league.name,
       avatar: league.avatar ? AVATAR(league.avatar) : null,
       standings,
-      championKey, runnerUpKey, thirdKey
+      championKey, runnerUpKey, thirdKey, loserKey, secondLoserKey
     });
 
     for(const s of standings){
@@ -966,13 +983,14 @@ function txStatsFor(ownerKey, year){
 
 function careerStats(ownerKey){
   const team = TEAMS.get(ownerKey);
-  let wins=0, losses=0, ties=0, pf=0, pa=0, championships=0, runnerUps=0, seasonsPlayed=team.seasons.length;
+  let wins=0, losses=0, ties=0, pf=0, pa=0, championships=0, runnerUps=0, toiletBowls=0, seasonsPlayed=team.seasons.length;
   for(const s of team.seasons){ wins+=s.wins; losses+=s.losses; ties+=s.ties; pf+=s.pf; pa+=s.pa; }
   for(const season of SEASONS){
     if(season.championKey === ownerKey) championships++;
     if(season.runnerUpKey === ownerKey) runnerUps++;
+    if(season.loserKey === ownerKey) toiletBowls++;
   }
-  return { wins, losses, ties, pf, pa, championships, runnerUps, seasonsPlayed, winPct: pct(wins,losses,ties) };
+  return { wins, losses, ties, pf, pa, championships, runnerUps, toiletBowls, seasonsPlayed, winPct: pct(wins,losses,ties) };
 }
 
 function computeStreaks(ownerKey){
@@ -1021,6 +1039,11 @@ function playoffRateFor(ownerKey){
 
 function titlesFor(ownerKey){
   const years = SEASONS.filter(s => s.championKey === ownerKey).map(s => s.year);
+  return { count: years.length, years };
+}
+
+function toiletBowlsFor(ownerKey){
+  const years = SEASONS.filter(s => s.loserKey === ownerKey).map(s => s.year);
   return { count: years.length, years };
 }
 
@@ -1088,6 +1111,8 @@ function allTimeStandingsRows(){
 
 function renderOverview(){
   const rows = allTimeStandingsRows();
+  const hasToiletBowl = SEASONS.some(s => s.loserKey);
+
   const trophies = SEASONS.slice().reverse().map(s => {
     const champ = s.championKey ? TEAMS.get(s.championKey) : null;
     const runner = s.runnerUpKey ? TEAMS.get(s.runnerUpKey) : null;
@@ -1097,6 +1122,16 @@ function renderOverview(){
       <div class="note">${runner ? 'def. ' + escapeHtml(runner.name) : '&nbsp;'}</div>
     </div>`;
   }).join('');
+
+  const toiletTrophies = hasToiletBowl ? SEASONS.slice().reverse().map(s => {
+    const loser = s.loserKey ? TEAMS.get(s.loserKey) : null;
+    const secondLoser = s.secondLoserKey ? TEAMS.get(s.secondLoserKey) : null;
+    return `<div class="trophy-plate shame-plate">
+      <div class="year">${s.year}</div>
+      <div class="champ">${loser ? escapeHtml(loser.name) : 'Unreported'}</div>
+      <div class="note">${secondLoser ? 'def. ' + escapeHtml(secondLoser.name) : '&nbsp;'}</div>
+    </div>`;
+  }).join('') : '';
 
   const standingsRows = rows.map((r,i) => {
     const t = TEAMS.get(r.ownerKey);
@@ -1110,6 +1145,7 @@ function renderOverview(){
       <td class="num">${ap.w}-${ap.l}${ap.t?('-'+ap.t):''}</td>
       <td class="num">${fmt3(apPct)}</td>
       <td class="num">${r.championships ? '\uD83C\uDFC6 '.repeat(Math.min(r.championships,3)) + (r.championships>3?`(${r.championships})`:'') : '&mdash;'}</td>
+      ${hasToiletBowl ? `<td class="num">${r.toiletBowls ? '\uD83E\uDEA0 '.repeat(Math.min(r.toiletBowls,3)) + (r.toiletBowls>3?`(${r.toiletBowls})`:'') : '&mdash;'}</td>` : ''}
       <td class="num">${fmt1(r.pf)}</td>
       <td class="num">${fmt1(r.pa)}</td>
     </tr>`;
@@ -1119,18 +1155,24 @@ function renderOverview(){
     <h2 class="section-title">Trophy Case</h2>
     <div class="trophy-strip">${trophies}</div>
 
+    ${hasToiletBowl ? `
+    <h2 class="section-title" style="margin-top:22px;">Toilet Bowl</h2>
+    <div class="trophy-strip">${toiletTrophies}</div>
+    ` : ''}
+
     <h2 class="section-title" style="margin-top:22px;">All-Time Standings</h2>
     <div style="overflow-x:auto;">
     <table>
       <thead><tr>
         <th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">Win%</th>
         <th class="num">All-Play</th><th class="num">All-Play %</th>
-        <th class="num">Rings</th><th class="num">PF</th><th class="num">PA</th>
+        <th class="num">Rings</th>${hasToiletBowl ? '<th class="num">Toilet Bowls</th>' : ''}
+        <th class="num">PF</th><th class="num">PA</th>
       </tr></thead>
       <tbody>${standingsRows}</tbody>
     </table>
     </div>
-    <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored. "All-Play" is the record you'd have if you played every team every week &mdash; a schedule-independent read on how good a team actually was.</p>
+    <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored. "All-Play" is the record you'd have if you played every team every week &mdash; a schedule-independent read on how good a team actually was.${hasToiletBowl ? ' \uD83E\uDEA0 marks a season spent in the Toilet Bowl.' : ''}</p>
 
     <h2 class="section-title" style="margin-top:26px;">League Milestones Timeline</h2>
     ${renderMilestonesTimeline()}
@@ -1907,6 +1949,8 @@ function renderMilestones(ownerKey){
   const bestSlot = bestDraftSlotFor(ownerKey);
   const playoffRate = playoffRateFor(ownerKey);
   const titles = titlesFor(ownerKey);
+  const toiletBowls = toiletBowlsFor(ownerKey);
+  const hasToiletBowl = SEASONS.some(s => s.loserKey);
 
   const ordinal = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
 
@@ -1918,6 +1962,9 @@ function renderMilestones(ownerKey){
     { label: 'Playoff Appearances', value: playoffRate.appearances, sub: `${Math.round(playoffRate.pct*100)}% of seasons` },
     { label: 'Championships', value: titles.count, sub: titles.years.length ? titles.years.join(', ') : 'Still searching' },
   ];
+  if(hasToiletBowl){
+    cards.push({ label: 'Toilet Bowls', value: toiletBowls.count, sub: toiletBowls.years.length ? toiletBowls.years.join(', ') : 'Never (yet)' });
+  }
 
   return `<div class="milestone-grid">${cards.map(c => `
     <div class="milestone-card">
@@ -1998,6 +2045,8 @@ function renderTeamStatCards(ownerKey, year){
     const season = SEASONS.find(s => s.year === year);
     const isChamp = season && season.championKey === ownerKey;
     const isRunnerUp = season && season.runnerUpKey === ownerKey;
+    const isLoser = season && season.loserKey === ownerKey;
+    const isSecondLoser = season && season.secondLoserKey === ownerKey;
     fifthCard = `
       <div class="stat-card">
         <div class="sc-label">Made Playoffs</div>
@@ -2007,7 +2056,7 @@ function renderTeamStatCards(ownerKey, year){
     sixthCard = `
       <div class="stat-card">
         <div class="sc-label">Season Result</div>
-        <div class="sc-value">${isChamp ? '\uD83C\uDFC6 Champion' : isRunnerUp ? 'Runner-Up' : madePlayoffs ? 'Playoffs' : 'Missed'}</div>
+        <div class="sc-value">${isChamp ? '\uD83C\uDFC6 Champion' : isRunnerUp ? 'Runner-Up' : isLoser ? '\uD83E\uDEA0 Toilet Bowl' : isSecondLoser ? 'Toilet Bowl Runner-Up' : madePlayoffs ? 'Playoffs' : 'Missed'}</div>
         <div class="sc-sub">${year}</div>
       </div>`;
   }
@@ -2468,6 +2517,21 @@ function renderAwards(){
   `;
 }
 
+function renderToiletBowlHistory(){
+  const seasonsWithLoser = SEASONS.filter(s => s.loserKey);
+  if(seasonsWithLoser.length === 0) return '';
+  const rows = seasonsWithLoser.slice().reverse().map(s => `
+    <li>
+      <div class="shame-headline">${s.year}: ${escapeHtml(TEAMS.get(s.loserKey).name)} wins the Toilet Bowl</div>
+      <div class="shame-sub">${s.secondLoserKey ? 'Edged out ' + escapeHtml(TEAMS.get(s.secondLoserKey).name) + ' for the season\'s worst finish.' : ''}</div>
+    </li>`).join('');
+  return `
+    <div class="card">
+      <h3 class="card-title">Toilet Bowl History</h3>
+      <ul class="shame-list">${rows}</ul>
+    </div>`;
+}
+
 function renderHallOfShame(){
   const losses = GAME_ENTRIES.filter(g => g.margin < 0).sort((a,b) => b.pf-a.pf).slice(0,5);
   const backdoorWins = GAME_ENTRIES.filter(g => g.margin > 0).sort((a,b) => a.pf-b.pf).slice(0,5);
@@ -2553,6 +2617,7 @@ function renderHallOfShame(){
       <div class="card"><h3 class="card-title">Luckiest Seasons Ever</h3><ul class="shame-list">${luckySeasonList}</ul></div>
       <div class="card"><h3 class="card-title">Unluckiest Seasons Ever</h3><ul class="shame-list">${unluckySeasonList}</ul></div>
     </div>
+    ${renderToiletBowlHistory()}
     <div class="grid-2">
       <div class="card">
         <h3 class="card-title">Worst Bench Blunders</h3>
