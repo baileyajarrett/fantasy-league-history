@@ -56,6 +56,7 @@ type Bundle struct {
 	Users          json.RawMessage   `json:"users"`
 	Rosters        json.RawMessage   `json:"rosters"`
 	WinnersBracket json.RawMessage   `json:"winnersBracket"`
+	LosersBracket  json.RawMessage   `json:"losersBracket"`
 	Weeks          []json.RawMessage `json:"weeks"`
 	Transactions   []json.RawMessage `json:"transactions"`
 	DraftPicks     json.RawMessage   `json:"draftPicks"`
@@ -149,6 +150,7 @@ func loadBundle(leagueRaw json.RawMessage) (Bundle, error) {
 		return Bundle{}, err
 	}
 	bracket := fetchOptional(fmt.Sprintf("%s/league/%s/winners_bracket", baseURL, meta.LeagueID))
+	loserBracket := fetchOptional(fmt.Sprintf("%s/league/%s/losers_bracket", baseURL, meta.LeagueID))
 
 	var draftPicks json.RawMessage = json.RawMessage("[]")
 	if meta.DraftID != "" {
@@ -194,6 +196,7 @@ func loadBundle(leagueRaw json.RawMessage) (Bundle, error) {
 		Users:          json.RawMessage(usersBody),
 		Rosters:        json.RawMessage(rostersBody),
 		WinnersBracket: bracket,
+		LosersBracket:  loserBracket,
 		Weeks:          weeks,
 		Transactions:   transactions,
 		DraftPicks:     draftPicks,
