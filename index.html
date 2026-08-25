@@ -34,8 +34,7 @@
     font-family:'IBM Plex Serif', serif;
     min-height:100vh;
   }
-  .wrap{max-width:1080px;margin:0 auto;padding:28px 56px 80px;}
-  @media (max-width:700px){.wrap{padding:20px 18px 60px;}}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 72px 80px;}
 
   /* ---------- Masthead ---------- */
   .masthead{
@@ -182,6 +181,7 @@
   }
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   @media (max-width:700px){.grid-2{grid-template-columns:1fr;}}
+  @media (max-width:700px){.wrap{padding:20px 18px 60px;}}
 
   /* ---------- Season cards ---------- */
   .season-card .season-head{
@@ -325,6 +325,9 @@ let DRAFTS = new Map();    // year -> [ {ownerKey, round, pickNo, draftSlot, pla
 let PLAYOFF_TEAMS = new Map(); // year -> Set(ownerKey) of teams that made the playoffs
 let CHAMP_GAMES = [];      // [{year, champKey, champPts, runnerKey, runnerPts}]
 let BENCH_BLUNDERS = [];   // [{ownerKey, year, week, benchPlayerId, benchPts, starterPlayerId, starterPts, delta}]
+let ALL_PLAY = new Map();  // ownerKey -> Map(year -> {w,l,t}) — literal record if you'd played every team every week
+let COACHING_EFF = new Map(); // ownerKey -> Map(year -> {actualPts, optimalPts})
+let EFFICIENCY_WEEKS = []; // [{ownerKey, year, week, actualPts, optimalPts, pct}] — for record-book entries
 
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -389,6 +392,54 @@ function ownerKeyFor(ownerId, rosterId){
   return ownerId ? `u_${ownerId}` : `orphan_${rosterId}`;
 }
 
+// Which real positions can fill each kind of lineup slot. Sleeper's
+// standard flex codes are covered; anything unrecognized (e.g. IDP slots)
+// is skipped rather than guessed at, so optimal-points calcs stay honest
+// about leagues that use exotic slot types.
+const SLOT_ELIGIBILITY = {
+  QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], K: ['K'],
+  DEF: ['DEF'], DST: ['DEF'],
+  FLEX: ['RB','WR','TE'],
+  SUPER_FLEX: ['QB','RB','WR','TE'],
+  WRRB_FLEX: ['WR','RB'],
+  REC_FLEX: ['WR','TE'],
+  WR_TE_FLEX: ['WR','TE'],
+};
+
+// Greedy-but-optimal lineup solver: process the most restrictive slots
+// (fewest eligible positions) first, assigning each the highest-scoring
+// still-available eligible player, then move to broader flex slots. Because
+// every flex category here is a strict superset of the stricter categories
+// (a laminar structure), filling narrow-to-broad is provably optimal for
+// this assignment — the same principle daily-fantasy "optimal lineup" tools
+// rely on. Unrecognized slot codes (BN, IR, TAXI, IDP positions) are simply
+// skipped, so this only ever under-counts in exotic-roster edge cases,
+// never over-counts.
+function computeOptimalLineup(playersPoints, rosterPositions){
+  const startingSlots = (rosterPositions||[]).filter(code => SLOT_ELIGIBILITY[code]);
+  if(startingSlots.length === 0) return null; // unknown roster format — don't guess
+
+  const pool = [];
+  for(const pid in playersPoints){
+    const meta = PLAYERS.get(pid);
+    if(meta && meta.position) pool.push({ id: pid, position: meta.position, pts: Number(playersPoints[pid])||0 });
+  }
+
+  const slotsSorted = startingSlots.slice().sort((a,b) => SLOT_ELIGIBILITY[a].length - SLOT_ELIGIBILITY[b].length);
+  const used = new Set();
+  let total = 0;
+  for(const slot of slotsSorted){
+    const eligible = SLOT_ELIGIBILITY[slot];
+    let best = null;
+    for(const p of pool){
+      if(used.has(p.id) || !eligible.includes(p.position)) continue;
+      if(!best || p.pts > best.pts) best = p;
+    }
+    if(best){ used.add(best.id); total += best.pts; }
+  }
+  return total;
+}
+
 function processSeasons(bundles, playersById){
   SEASONS = [];
   TEAMS = new Map();
@@ -402,6 +453,9 @@ function processSeasons(bundles, playersById){
   PLAYOFF_TEAMS = new Map();
   CHAMP_GAMES = [];
   BENCH_BLUNDERS = [];
+  ALL_PLAY = new Map();
+  COACHING_EFF = new Map();
+  EFFICIENCY_WEEKS = [];
 
   PLAYERS = new Map();
   for(const id in (playersById || {})){ PLAYERS.set(id, playersById[id]); }
@@ -460,13 +514,19 @@ function processSeasons(bundles, playersById){
     if(playoffOwnerKeys.size > 0) PLAYOFF_TEAMS.set(seasonYear, playoffOwnerKeys);
 
     const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+    const rosterPositions = league.roster_positions || [];
 
     // Per-season running totals used for power rankings / luck ratings / bench tax
     const cumWins = new Map(), cumTies = new Map(), cumPF = new Map();
     const seasonExpectedWins = new Map();
     const seasonBenchTax = new Map();
+    const seasonAllPlay = new Map();
+    const seasonCoachEff = new Map();
     const playerSeasonPoints = new Map();
-    for(const key of rosterIdToOwnerKey.values()){ cumWins.set(key,0); cumTies.set(key,0); cumPF.set(key,0); seasonExpectedWins.set(key,0); seasonBenchTax.set(key,0); }
+    for(const key of rosterIdToOwnerKey.values()){
+      cumWins.set(key,0); cumTies.set(key,0); cumPF.set(key,0); seasonExpectedWins.set(key,0);
+      seasonBenchTax.set(key,0); seasonAllPlay.set(key,{w:0,l:0,t:0}); seasonCoachEff.set(key,{actualPts:0,optimalPts:0});
+    }
     const seasonPowerWeeks = [];
 
     weeks.forEach((weekArr, idx) => {
@@ -523,6 +583,17 @@ function processSeasons(bundles, playersById){
         }
         seasonBenchTax.set(ownerKey, (seasonBenchTax.get(ownerKey)||0) + benchPts);
 
+        const optimalPts = computeOptimalLineup(playersPoints, rosterPositions);
+        if(optimalPts != null){
+          const actualPts = starterList.reduce((s,c) => s+c.pts, 0);
+          const rec = seasonCoachEff.get(ownerKey);
+          rec.actualPts += actualPts; rec.optimalPts += optimalPts;
+          EFFICIENCY_WEEKS.push({
+            ownerKey, year: seasonYear, week, actualPts, optimalPts,
+            pct: optimalPts > 0 ? (actualPts/optimalPts)*100 : 100
+          });
+        }
+
         if(starterList.length && benchList.length){
           const minStarter = starterList.reduce((m,c) => c.pts < m.pts ? c : m);
           const maxBench = benchList.reduce((m,c) => c.pts > m.pts ? c : m);
@@ -537,15 +608,18 @@ function processSeasons(bundles, playersById){
         }
       }
 
-      // ---- Luck: expected wins from where this week's score would rank league-wide ----
+      // ---- Luck: expected wins & literal all-play record from where this
+      // week's score would rank against the whole league ----
       if(!isPlayoff && weekAllPoints.length > 1){
         const n = weekAllPoints.length;
         for(const { ownerKey, pf } of weekAllPoints){
           let beaten = 0;
+          const allPlay = seasonAllPlay.get(ownerKey);
           for(const other of weekAllPoints){
             if(other.ownerKey === ownerKey) continue;
-            if(pf > other.pf) beaten += 1;
-            else if(pf === other.pf) beaten += 0.5;
+            if(pf > other.pf){ beaten += 1; allPlay.w += 1; }
+            else if(pf === other.pf){ beaten += 0.5; allPlay.t += 1; }
+            else { allPlay.l += 1; }
           }
           seasonExpectedWins.set(ownerKey, (seasonExpectedWins.get(ownerKey)||0) + beaten/(n-1));
         }
@@ -576,6 +650,12 @@ function processSeasons(bundles, playersById){
 
       if(!BENCH_TAX.has(ownerKey)) BENCH_TAX.set(ownerKey, new Map());
       BENCH_TAX.get(ownerKey).set(seasonYear, seasonBenchTax.get(ownerKey)||0);
+
+      if(!ALL_PLAY.has(ownerKey)) ALL_PLAY.set(ownerKey, new Map());
+      ALL_PLAY.get(ownerKey).set(seasonYear, seasonAllPlay.get(ownerKey) || {w:0,l:0,t:0});
+
+      if(!COACHING_EFF.has(ownerKey)) COACHING_EFF.set(ownerKey, new Map());
+      COACHING_EFF.get(ownerKey).set(seasonYear, seasonCoachEff.get(ownerKey) || {actualPts:0,optimalPts:0});
     }
 
     // Championship game score, for Hall of Shame "letdown" entries
@@ -712,6 +792,28 @@ function benchTaxFor(ownerKey, year){
   if(year == null) return Array.from(byYear.values()).reduce((s,v)=>s+v,0);
   return byYear.get(year) || 0;
 }
+function allPlayFor(ownerKey, year){
+  const byYear = ALL_PLAY.get(ownerKey);
+  if(!byYear) return { w:0, l:0, t:0 };
+  if(year == null){
+    let w=0,l=0,t=0;
+    for(const v of byYear.values()){ w+=v.w; l+=v.l; t+=v.t; }
+    return { w, l, t };
+  }
+  return byYear.get(year) || { w:0, l:0, t:0 };
+}
+function coachingEffFor(ownerKey, year){
+  const byYear = COACHING_EFF.get(ownerKey);
+  if(!byYear) return { actualPts:0, optimalPts:0, pct:null };
+  let actualPts=0, optimalPts=0;
+  if(year == null){
+    for(const v of byYear.values()){ actualPts+=v.actualPts; optimalPts+=v.optimalPts; }
+  } else {
+    const v = byYear.get(year) || { actualPts:0, optimalPts:0 };
+    actualPts = v.actualPts; optimalPts = v.optimalPts;
+  }
+  return { actualPts, optimalPts, pct: optimalPts > 0 ? (actualPts/optimalPts)*100 : null };
+}
 function luckFor(ownerKey, year){
   const byYear = LUCK.get(ownerKey);
   if(!byYear) return { actualWins:0, expectedWins:0 };
@@ -796,11 +898,15 @@ function renderOverview(){
 
   const standingsRows = rows.map((r,i) => {
     const t = TEAMS.get(r.ownerKey);
+    const ap = allPlayFor(r.ownerKey, null);
+    const apPct = pct(ap.w, ap.l, ap.t);
     return `<tr>
       <td class="num"><span class="rank-badge">${i+1}</span></td>
       <td>${teamLabel(r.ownerKey)}</td>
       <td class="num">${r.wins}-${r.losses}${r.ties?('-'+r.ties):''}</td>
       <td class="num">${fmt3(r.winPct)}</td>
+      <td class="num">${ap.w}-${ap.l}${ap.t?('-'+ap.t):''}</td>
+      <td class="num">${fmt3(apPct)}</td>
       <td class="num">${r.championships ? '\uD83C\uDFC6 '.repeat(Math.min(r.championships,3)) + (r.championships>3?`(${r.championships})`:'') : '&mdash;'}</td>
       <td class="num">${fmt1(r.pf)}</td>
       <td class="num">${fmt1(r.pa)}</td>
@@ -816,12 +922,13 @@ function renderOverview(){
     <table>
       <thead><tr>
         <th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">Win%</th>
+        <th class="num">All-Play</th><th class="num">All-Play %</th>
         <th class="num">Rings</th><th class="num">PF</th><th class="num">PA</th>
       </tr></thead>
       <tbody>${standingsRows}</tbody>
     </table>
     </div>
-    <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored.</p>
+    <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored. "All-Play" is the record you'd have if you played every team every week &mdash; a schedule-independent read on how good a team actually was.</p>
   `;
 }
 
@@ -978,6 +1085,13 @@ function renderRecords(){
     if(s.maxL > bestLossStreak.val) bestLossStreak = {ownerKey:key, val:s.maxL};
   }
 
+  const bestManagedWeeks = EFFICIENCY_WEEKS.filter(w => w.optimalPts > 0).slice().sort((a,b) => b.pct-a.pct).slice(0,5);
+  const managedLine = (w) => `
+    <li>
+      <span class="who">${teamLabel(w.ownerKey,'sm')}<span class="muted">${w.year} wk${w.week} &middot; ${fmt1(w.actualPts)} of ${fmt1(w.optimalPts)} possible</span></span>
+      <span class="amt">${fmt1(w.pct)}%</span>
+    </li>`;
+
   return `
     <h2 class="section-title">The Record Book</h2>
     <div class="grid-2">
@@ -990,12 +1104,19 @@ function renderRecords(){
       ${seasonBlock('Best Season Record', bestRecordSeason, r=>fmt3(r.winPct))}
       ${seasonBlock('Worst Season Record', worstRecordSeason, r=>fmt3(r.winPct))}
     </div>
-    <div class="card">
-      <h3 class="card-title">Streaks</h3>
-      <ul class="record-list">
-        <li><span class="who">${bestWinStreak.ownerKey ? teamLabel(bestWinStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest win streak</span></span><span class="amt">${bestWinStreak.val} games</span></li>
-        <li><span class="who">${bestLossStreak.ownerKey ? teamLabel(bestLossStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest losing streak</span></span><span class="amt">${bestLossStreak.val} games</span></li>
-      </ul>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Streaks</h3>
+        <ul class="record-list">
+          <li><span class="who">${bestWinStreak.ownerKey ? teamLabel(bestWinStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest win streak</span></span><span class="amt">${bestWinStreak.val} games</span></li>
+          <li><span class="who">${bestLossStreak.ownerKey ? teamLabel(bestLossStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest losing streak</span></span><span class="amt">${bestLossStreak.val} games</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Best-Managed Weeks</h3>
+        <ul class="record-list">${bestManagedWeeks.map(managedLine).join('') || '<li class="muted">No data yet</li>'}</ul>
+        <p class="muted" style="margin-top:8px;">Closest a lineup came to scoring its own best-possible total that week.</p>
+      </div>
     </div>
 
     <h2 class="section-title" style="margin-top:26px;">Postseason Only</h2>
@@ -1076,6 +1197,9 @@ function renderTeamDetail(ownerKey){
   const luckDelta = luck.actualWins - luck.expectedWins;
   const bench = benchTaxFor(ownerKey, null);
   const tx = txStatsFor(ownerKey, null);
+  const ap = allPlayFor(ownerKey, null);
+  const apPct = pct(ap.w, ap.l, ap.t);
+  const eff = coachingEffFor(ownerKey, null);
 
   return `
     <div class="card team-detail">
@@ -1085,7 +1209,9 @@ function renderTeamDetail(ownerKey){
       </div></div>
 
       <div class="award-grid" style="margin-bottom:18px;">
+        <div class="award-card"><div class="award-name">All-Play Record</div><div class="award-stat" style="margin-top:8px;">${ap.w}-${ap.l}${ap.t?('-'+ap.t):''} (${fmt3(apPct)})</div></div>
         <div class="award-card"><div class="award-name">Luck (actual vs. expected wins)</div><div class="award-stat" style="margin-top:8px;">${luck.actualWins} vs. ${fmt1(luck.expectedWins)} (${luckDelta>=0?'+':''}${fmt1(luckDelta)})</div></div>
+        <div class="award-card"><div class="award-name">Coaching Efficiency</div><div class="award-stat" style="margin-top:8px;">${eff.pct!=null ? fmt1(eff.pct)+'%' : 'n/a'}</div></div>
         <div class="award-card"><div class="award-name">Bench Points Stranded</div><div class="award-stat" style="margin-top:8px;">${fmt1(bench)} pts, career</div></div>
         <div class="award-card"><div class="award-name">Roster Moves</div><div class="award-stat" style="margin-top:8px;">${tx.trades} trades &middot; ${tx.waiverAdds} waiver &middot; ${tx.faAdds} FA</div></div>
       </div>
@@ -1325,6 +1451,10 @@ function renderAwardsContent(year){
   const tradeHawk = byTx.slice().sort((a,b) => b.trades-a.trades)[0];
   const waiverWizard = byTx.slice().sort((a,b) => b.waiverAdds-a.waiverAdds)[0];
 
+  const byEff = keys.map(k => coachingEffFor(k, year)).map((e,i) => ({ ownerKey: keys[i], ...e })).filter(e => e.pct != null);
+  const bestManager = byEff.length ? byEff.slice().sort((a,b) => b.pct-a.pct)[0] : null;
+  const autopilotGM = byEff.length ? byEff.slice().sort((a,b) => a.pct-b.pct)[0] : null;
+
   const card = (name, ownerKey, stat, desc) => `
     <div class="award-card">
       <div class="award-name">${name}</div>
@@ -1345,8 +1475,10 @@ function renderAwardsContent(year){
       ${card('Unluckiest', unluckiest.ownerKey, `${fmt1(unluckiest.delta)} wins vs. expected`, `${unluckiest.actualWins} actual wins vs. ${fmt1(unluckiest.expectedWins)} expected, ${scopeWord}.`)}
       ${tradeHawk.trades > 0 ? card('Trade Hawk', tradeHawk.ownerKey, `${tradeHawk.trades} trades`, `Most trades completed, ${scopeWord}.`) : ''}
       ${waiverWizard.waiverAdds > 0 ? card('Waiver Wire Wizard', waiverWizard.ownerKey, `${waiverWizard.waiverAdds} waiver adds`, `Most successful waiver claims, ${scopeWord}.`) : ''}
+      ${bestManager ? card('Best Manager', bestManager.ownerKey, `${fmt1(bestManager.pct)}% of optimal`, `Set lineups closest to their own best-possible score, ${scopeWord}.`) : ''}
+      ${autopilotGM ? card('Autopilot GM', autopilotGM.ownerKey, `${fmt1(autopilotGM.pct)}% of optimal`, `Furthest from their own best-possible lineup, ${scopeWord}.`) : ''}
     </div>
-    <p class="muted" style="margin-top:16px;">"Expected wins" compares each week's score against the rest of the league that week &mdash; a team with a top-scoring week "expected" a win regardless of who they were actually paired against.</p>
+    <p class="muted" style="margin-top:16px;">"Expected wins" compares each week's score against the rest of the league that week &mdash; a team with a top-scoring week "expected" a win regardless of who they were actually paired against. "% of optimal" compares actual starting lineup points to the best lineup that roster could have started that week.</p>
   `;
 }
 
@@ -1409,6 +1541,32 @@ function renderHallOfShame(){
       <div class="shame-sub">${playerLabel(b.benchPlayerId)} scored ${fmt1(b.benchPts)} on the bench while starting ${escapeHtml(playerLabel(b.starterPlayerId))} (${fmt1(b.starterPts)} pts) &mdash; ${b.year} week ${b.week}, ${fmt1(b.delta)} pts left on the table</div>
     </li>`).join('') || '<li class="muted">No data yet</li>';
 
+  const seasonLuck = [];
+  for(const [ownerKey, byYear] of LUCK.entries()){
+    for(const [year, l] of byYear.entries()){
+      seasonLuck.push({ ownerKey, year, delta: l.actualWins - l.expectedWins, ...l });
+    }
+  }
+  const luckiestSeasons = seasonLuck.slice().sort((a,b) => b.delta-a.delta).slice(0,5);
+  const unluckiestSeasons = seasonLuck.slice().sort((a,b) => a.delta-b.delta).slice(0,5);
+  const luckySeasonList = luckiestSeasons.map(s => `
+    <li>
+      <div class="shame-headline">${s.year}: ${escapeHtml(TEAMS.get(s.ownerKey).name)} got away with it</div>
+      <div class="shame-sub">${s.actualWins} actual wins vs. ${fmt1(s.expectedWins)} expected &mdash; ${s.delta>=0?'+':''}${fmt1(s.delta)} wins of pure luck</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+  const unluckySeasonList = unluckiestSeasons.map(s => `
+    <li>
+      <div class="shame-headline">${s.year}: ${escapeHtml(TEAMS.get(s.ownerKey).name)} deserved better</div>
+      <div class="shame-sub">${s.actualWins} actual wins vs. ${fmt1(s.expectedWins)} expected &mdash; ${fmt1(s.delta)} wins of bad luck</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
+  const worstWeeks = EFFICIENCY_WEEKS.filter(w => w.optimalPts > 0).slice().sort((a,b) => a.pct-b.pct).slice(0,5);
+  const worstManagedList = worstWeeks.map(w => `
+    <li>
+      <div class="shame-headline">${escapeHtml(TEAMS.get(w.ownerKey).name)} left ${fmt1(w.optimalPts-w.actualPts)} points on the table</div>
+      <div class="shame-sub">Scored ${fmt1(w.actualPts)} of a possible ${fmt1(w.optimalPts)} (${fmt1(w.pct)}%) &mdash; ${w.year} week ${w.week}</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
   return `
     <h2 class="section-title">Hall of Shame</h2>
     <div class="grid-2">
@@ -1416,10 +1574,19 @@ function renderHallOfShame(){
       <div class="card"><h3 class="card-title">Backdoor Wins</h3><ul class="shame-list">${backdoorList}</ul></div>
       <div class="card"><h3 class="card-title">Championship Letdowns</h3><ul class="shame-list">${letdownList}</ul></div>
       <div class="card"><h3 class="card-title">Missed the Playoffs by a Hair</h3><ul class="shame-list">${bubbleList}</ul></div>
+      <div class="card"><h3 class="card-title">Luckiest Seasons Ever</h3><ul class="shame-list">${luckySeasonList}</ul></div>
+      <div class="card"><h3 class="card-title">Unluckiest Seasons Ever</h3><ul class="shame-list">${unluckySeasonList}</ul></div>
     </div>
-    <div class="card">
-      <h3 class="card-title">Worst Bench Blunders</h3>
-      <ul class="shame-list">${blunders}</ul>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">Worst Bench Blunders</h3>
+        <ul class="shame-list">${blunders}</ul>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Worst-Managed Weeks</h3>
+        <ul class="shame-list">${worstManagedList}</ul>
+        <p class="muted" style="margin-top:8px;">Biggest gaps between what a lineup scored and the best lineup that roster could have started that week.</p>
+      </div>
     </div>
   `;
 }
