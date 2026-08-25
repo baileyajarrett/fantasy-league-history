@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>League Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-stadium:#121C26;
+    --bg-stadium-2:#0D1620;
+    --turf:#2F4E3D;
+    --turf-light:#3C5F4B;
+    --cream:#EFE7D6;
+    --cream-2:#E7DCC5;
+    --amber:#E8A33D;
+    --amber-dim:#C68A2E;
+    --oxblood:#8C3331;
+    --oxblood-light:#B04B44;
+    --chalk:#F7F4EC;
+    --ink:#1B2A3D;
+    --ink-soft:#4A5568;
+    --line:#C9BC9C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(232,163,61,0.08), transparent 60%),
+      linear-gradient(180deg, var(--bg-stadium) 0%, var(--bg-stadium-2) 100%);
+    color:var(--chalk);
+    font-family:'IBM Plex Serif', serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    display:flex;align-items:center;gap:18px;
+    padding-bottom:22px;margin-bottom:6px;
+    border-bottom:3px double var(--line);
+  }
+  .masthead img.league-avatar{
+    width:56px;height:56px;border-radius:6px;object-fit:cover;
+    border:2px solid var(--amber);flex-shrink:0;
+  }
+  .masthead-text .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--amber); margin:0 0 4px;
+  }
+  .masthead-text h1{
+    font-family:'Big Shoulders Display',sans-serif;
+    font-weight:800;font-size:clamp(28px,5vw,44px);
+    letter-spacing:.01em;margin:0;line-height:1;color:var(--chalk);
+    text-transform:uppercase;
+  }
+  .masthead-text .sub{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9FB0A6;margin-top:5px;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex;gap:2px;margin:22px 0 26px;flex-wrap:wrap;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .tab-btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    background:transparent;border:none;color:#8B9AA5;
+    padding:11px 16px;cursor:pointer;position:relative;
+    border-top-left-radius:4px;border-top-right-radius:4px;
+    transition:color .15s;
+  }
+  .tab-btn:hover{color:var(--chalk);}
+  .tab-btn.active{color:var(--amber);background:rgba(232,163,61,0.08);}
+  .tab-btn.active::after{
+    content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--amber);
+  }
+
+  /* ---------- Ledger page/card ---------- */
+  .page{
+    background:var(--cream);
+    color:var(--ink);
+    border-radius:3px;
+    box-shadow:0 18px 40px rgba(0,0,0,0.35);
+    position:relative;
+  }
+  .page::before{
+    content:'';position:absolute;inset:0;
+    background-image:repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(27,42,61,0.05) 28px);
+    pointer-events:none;border-radius:3px;
+  }
+  .page-inner{position:relative;padding:26px 26px 30px;}
+  .card{
+    background:var(--cream);color:var(--ink);border-radius:3px;
+    box-shadow:0 10px 24px rgba(0,0,0,0.28);padding:20px 22px;margin-bottom:18px;
+  }
+  h2.section-title{
+    font-family:'Big Shoulders Display',sans-serif;font-weight:800;
+    font-size:22px;text-transform:uppercase;letter-spacing:.02em;
+    margin:0 0 14px;color:var(--ink);
+    border-bottom:2px solid var(--turf);padding-bottom:8px;
+  }
+  h3.card-title{
+    font-family:'Big Shoulders Display',sans-serif;font-weight:700;
+    font-size:17px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 12px;color:var(--ink);
+  }
+  .muted{color:var(--ink-soft);font-size:13px;}
+
+  /* ---------- Tables ---------- */
+  table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  table.narrative{font-family:'IBM Plex Serif',serif;font-size:14px;}
+  th{
+    text-align:left;font-weight:600;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:6px 8px;border-bottom:1px solid var(--line);
+  }
+  td{padding:7px 8px;border-bottom:1px solid rgba(201,188,156,0.5);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  td.num,th.num{text-align:right;}
+  .team-cell{display:flex;align-items:center;gap:8px;}
+  .avatar{
+    width:26px;height:26px;border-radius:4px;object-fit:cover;background:var(--turf);flex-shrink:0;
+    border:1px solid rgba(27,42,61,0.15);
+  }
+  .avatar.sm{width:20px;height:20px;}
+  .avatar-fallback{
+    width:26px;height:26px;border-radius:4px;background:var(--turf);color:var(--chalk);
+    display:flex;align-items:center;justify-content:center;font-family:'Big Shoulders Display',sans-serif;
+    font-weight:700;font-size:11px;flex-shrink:0;
+  }
+  .rank-badge{
+    display:inline-block;width:20px;text-align:center;font-family:'Big Shoulders Display',sans-serif;
+    font-weight:700;color:var(--amber-dim);
+  }
+
+  /* ---------- Trophy case ---------- */
+  .trophy-strip{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;}
+  .trophy-plate{
+    min-width:150px;background:var(--turf);color:var(--chalk);border-radius:4px;padding:12px 14px;
+    border:1px solid rgba(0,0,0,0.2);position:relative;flex-shrink:0;
+  }
+  .trophy-plate .year{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--amber);
+    text-transform:uppercase;
+  }
+  .trophy-plate .champ{
+    font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;margin-top:4px;line-height:1.15;
+  }
+  .trophy-plate .note{font-size:10.5px;color:#C9D6CC;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Head to head grid ---------- */
+  .h2h-scroll{overflow-x:auto;}
+  table.h2h{font-size:11px;}
+  table.h2h th, table.h2h td{padding:5px 6px;text-align:center;white-space:nowrap;}
+  table.h2h th.rowlabel, table.h2h td.rowlabel{text-align:left;position:sticky;left:0;background:var(--cream);}
+  .stamp{
+    display:inline-block;min-width:52px;padding:3px 4px;border-radius:3px;font-family:'IBM Plex Mono',monospace;
+    font-weight:600;letter-spacing:.02em;
+  }
+  .stamp.win-heavy{background:rgba(47,78,61,0.18);color:#254536;}
+  .stamp.loss-heavy{background:rgba(140,51,49,0.16);color:#7A2C2A;}
+  .stamp.even{background:rgba(74,85,104,0.1);color:var(--ink-soft);}
+  .stamp.blank{color:#B7AC90;}
+  .diag{background:repeating-linear-gradient(45deg, rgba(27,42,61,0.06) 0 4px, transparent 4px 8px);}
+
+  /* ---------- Records ---------- */
+  .record-list{list-style:none;margin:0;padding:0;}
+  .record-list li{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:8px 0;border-bottom:1px solid rgba(201,188,156,0.5);font-size:13.5px;
+  }
+  .record-list li:last-child{border-bottom:none;}
+  .record-list .who{display:flex;align-items:center;gap:8px;}
+  .record-list .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--turf);}
+  .record-hero{
+    font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:15px;color:var(--ink);
+  }
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:700px){.grid-2{grid-template-columns:1fr;}}
+
+  /* ---------- Season cards ---------- */
+  .season-card .season-head{
+    display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;
+  }
+  .season-head .yr{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;color:var(--ink);}
+  .season-head .champ-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--turf);}
+
+  /* ---------- Team cards ---------- */
+  .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .team-card{
+    background:var(--cream-2);border-radius:4px;padding:14px;cursor:pointer;
+    border:1px solid rgba(27,42,61,0.08);transition:transform .1s, box-shadow .1s;
+  }
+  .team-card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.15);}
+  .team-card .thead{display:flex;align-items:center;gap:10px;}
+  .team-card .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;line-height:1.15;}
+  .team-card .trecord{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .team-card .rings{font-size:13px;margin-top:8px;color:var(--amber-dim);}
+  .team-detail{grid-column:1/-1;}
+
+  /* ---------- Loading / error ---------- */
+  .status-box{
+    padding:60px 20px;text-align:center;font-family:'IBM Plex Mono',monospace;color:#9FB0A6;
+  }
+  .status-box .spinner{
+    width:26px;height:26px;border:3px solid rgba(232,163,61,0.25);border-top-color:var(--amber);
+    border-radius:50%;margin:0 auto 16px;animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .status-box.error{color:var(--oxblood-light);}
+  .retry-btn{
+    margin-top:14px;font-family:'IBM Plex Mono',monospace;background:var(--amber);color:#231405;
+    border:none;padding:9px 18px;border-radius:3px;cursor:pointer;font-size:12px;letter-spacing:.05em;
+  }
+  footer.credit{text-align:center;color:#6E7E76;font-family:'IBM Plex Mono',monospace;font-size:10.5px;margin-top:28px;}
+
+  /* ---------- Awards / shame cards ---------- */
+  .award-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+  .award-card{background:var(--cream-2);border-radius:4px;padding:16px;border:1px solid rgba(27,42,61,0.08);}
+  .award-card .award-name{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-dim);
+  }
+  .award-card .award-winner{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .award-card .award-winner .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;}
+  .award-card .award-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .award-card .award-desc{font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.4;}
+
+  .shame-list{list-style:none;margin:0;padding:0;}
+  .shame-list li{
+    padding:12px 0;border-bottom:1px solid rgba(201,188,156,0.5);
+  }
+  .shame-list li:last-child{border-bottom:none;}
+  .shame-headline{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;color:var(--oxblood);}
+  .shame-sub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+
+  .keeper-badge{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;
+    background:var(--amber);color:#231405;border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle;
+  }
+
+  .select-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .select-row select{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--chalk);color:var(--ink);
+    border:1px solid var(--line);border-radius:3px;padding:7px 9px;
+  }
+  .select-row .vs{font-family:'Big Shoulders Display',sans-serif;font-weight:700;color:var(--ink-soft);}
+
+  .subhead{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);margin:18px 0 8px;
+  }
+  .pill{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;
+    background:rgba(47,78,61,0.14);color:#254536;
+  }
+  .pill.bad{background:rgba(140,51,49,0.14);color:#7A2C2A;}
+
+  /* ---------- Draft board grid ---------- */
+  table.draft-board{font-size:11.5px;}
+  table.draft-board th{text-align:center;white-space:nowrap;}
+  table.draft-board .round-label{
+    font-family:'Big Shoulders Display',sans-serif;font-weight:700;color:var(--ink-soft);
+    background:var(--cream-2);white-space:nowrap;
+  }
+  td.draft-cell{
+    min-width:110px;vertical-align:top;padding:6px 8px;border:1px solid rgba(201,188,156,0.4);
+    background:var(--chalk);
+  }
+  td.draft-cell.empty{color:#B7AC90;text-align:center;background:transparent;}
+  .draft-pick-player{font-weight:600;font-size:11.5px;line-height:1.25;}
+  .draft-pick-pts{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead" id="masthead">
+    <div class="masthead-text">
+      <p class="eyebrow">Est. loading&hellip;</p>
+      <h1 id="league-name">League Ledger</h1>
+      <p class="sub" id="league-sub">Pulling records from Sleeper</p>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" style="display:none;">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="seasons">Seasons</button>
+    <button class="tab-btn" data-tab="h2h">Head&#8209;to&#8209;Head</button>
+    <button class="tab-btn" data-tab="records">Records</button>
+    <button class="tab-btn" data-tab="draft">Draft</button>
+    <button class="tab-btn" data-tab="transactions">Transactions</button>
+    <button class="tab-btn" data-tab="awards">Awards</button>
+    <button class="tab-btn" data-tab="shame">Hall of Shame</button>
+    <button class="tab-btn" data-tab="teams">Teams</button>
+  </nav>
+
+  <div class="page"><div class="page-inner" id="content">
+    <div class="status-box">
+      <div class="spinner"></div>
+      <div id="status-text">Opening the ledger&hellip;</div>
+    </div>
+  </div></div>
+  <footer class="credit">Data via Sleeper API &middot; refreshed live on load</footer>
+</div>
+
+<script>
+const LEAGUE_ID = '1384692281021300736';
+const AVATAR = (id) => `https://sleepercdn.com/avatars/thumbs/${id}`;
+
+let SEASONS = [];         // per-season raw+derived data, chronological
+let TEAMS = new Map();     // ownerKey -> {ownerKey, name, avatar, seasons:[]}
+let GAME_ENTRIES = [];     // one entry per team-perspective per game
+let H2H = new Map();       // ownerKey -> Map(oppKey -> {w,l,t,pf,pa})
+let PLAYERS = new Map();   // player_id -> {name, position, team}
+let POWER_RANKINGS = new Map(); // year -> [ {week, ranked:[{ownerKey,score,rank}]} ]
+let LUCK = new Map();      // ownerKey -> Map(year -> {actualWins, expectedWins})
+let BENCH_TAX = new Map(); // ownerKey -> Map(year -> bench points left unused that season)
+let TX_STATS = new Map();  // ownerKey -> Map(year -> {trades, waiverAdds, faAdds})
+let TRANSACTIONS_LOG = new Map(); // year -> [ {type, week, sides / ownerKey+added+dropped} ]
+let DRAFTS = new Map();    // year -> [ {ownerKey, round, pickNo, draftSlot, playerId, isKeeper, seasonPoints} ]
+let PLAYOFF_TEAMS = new Map(); // year -> Set(ownerKey) of teams that made the playoffs
+let CHAMP_GAMES = [];      // [{year, champKey, champPts, runnerKey, runnerPts}]
+let BENCH_BLUNDERS = [];   // [{ownerKey, year, week, benchPlayerId, benchPts, starterPlayerId, starterPts, delta}]
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function setStatus(msg){ const el = document.getElementById('status-text'); if(el) el.textContent = msg; }
+
+function fmtPts(whole, decimal){
+  return (Number(whole||0) + Number(decimal||0)/100);
+}
+function pct(w,l,t){
+  const games = w+l+t;
+  if(!games) return 0;
+  return (w + t*0.5) / games;
+}
+function fmt1(n){ return (Math.round(n*10)/10).toFixed(1); }
+function fmt3(n){ return n.toFixed(3).replace(/^0/, ''); }
+
+function avatarImg(url, size){
+  return url ? `<img class="avatar${size==='sm'?' sm':''}" src="${url}" alt="">` : '';
+}
+function fallbackAvatar(name){
+  const initial = (name||'?').trim().charAt(0).toUpperCase();
+  return `<div class="avatar-fallback">${escapeHtml(initial)}</div>`;
+}
+function teamAvatarHtml(team, size){
+  return team.avatar ? avatarImg(team.avatar, size) : fallbackAvatar(team.name);
+}
+
+// -------------------- DATA LOADING --------------------
+// This site reads from a local league-data.json file (produced by running
+// fetch_data.go) instead of calling the Sleeper API directly. That avoids
+// cross-origin fetch restrictions entirely and means the page loads instantly
+// with no live network dependency.
+
+async function loadAll(){
+  setStatus('Reading league-data.json\u2026');
+  let payload;
+  try{
+    const res = await fetch('./league-data.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error(`league-data.json responded with ${res.status}`);
+    payload = await res.json();
+  } catch(err){
+    throw new Error(
+      "Couldn't load league-data.json. Make sure it's in the same folder as this HTML file, " +
+      "run fetch_data.go if you haven't yet, and open this page through a local server " +
+      "(e.g. `python3 -m http.server`) rather than double-clicking the file. See README.md."
+    );
+  }
+
+  const bundles = payload.bundles || [];
+  if(bundles.length === 0) throw new Error('league-data.json has no seasons in it yet.');
+
+  // Only keep seasons that actually have at least one completed week of matchups
+  const usable = bundles.filter(b => b.weeks.some(wk => Array.isArray(wk) && wk.length > 0));
+  usable.sort((a,b) => Number(a.league.season) - Number(b.league.season));
+  return { bundles: usable, playersById: payload.playersById || {} };
+}
+
+// -------------------- DATA PROCESSING --------------------
+
+function ownerKeyFor(ownerId, rosterId){
+  return ownerId ? `u_${ownerId}` : `orphan_${rosterId}`;
+}
+
+function processSeasons(bundles, playersById){
+  SEASONS = [];
+  TEAMS = new Map();
+  GAME_ENTRIES = [];
+  H2H = new Map();
+  POWER_RANKINGS = new Map();
+  LUCK = new Map();
+  BENCH_TAX = new Map();
+  TX_STATS = new Map();
+  DRAFTS = new Map();
+  PLAYOFF_TEAMS = new Map();
+  CHAMP_GAMES = [];
+  BENCH_BLUNDERS = [];
+
+  PLAYERS = new Map();
+  for(const id in (playersById || {})){ PLAYERS.set(id, playersById[id]); }
+  TRANSACTIONS_LOG = new Map();
+
+  for(const bundle of bundles){
+    const { league, users, rosters, winnersBracket, weeks, transactions, draftPicks } = bundle;
+    const seasonYear = Number(league.season);
+    const userById = new Map(users.map(u => [u.user_id, u]));
+    const rosterIdToOwnerKey = new Map();
+
+    const standings = [];
+    for(const roster of rosters){
+      const ownerKey = ownerKeyFor(roster.owner_id, roster.roster_id);
+      rosterIdToOwnerKey.set(roster.roster_id, ownerKey);
+      const user = roster.owner_id ? userById.get(roster.owner_id) : null;
+      const teamName = (user && (user.metadata && user.metadata.team_name)) || (user && user.display_name) || `Team ${roster.roster_id}`;
+      const avatar = (user && user.metadata && user.metadata.avatar) ? user.metadata.avatar
+                    : (user && user.avatar) ? AVATAR(user.avatar) : null;
+
+      if(!TEAMS.has(ownerKey)){
+        TEAMS.set(ownerKey, { ownerKey, name: teamName, avatar, seasons: [] });
+      }
+      // latest season's naming wins (we process chronologically)
+      const teamRecord = TEAMS.get(ownerKey);
+      teamRecord.name = teamName;
+      teamRecord.avatar = avatar;
+
+      const s = roster.settings || {};
+      standings.push({
+        ownerKey, rosterId: roster.roster_id, teamName,
+        wins: s.wins||0, losses: s.losses||0, ties: s.ties||0,
+        pf: fmtPts(s.fpts, s.fpts_decimal),
+        pa: fmtPts(s.fpts_against, s.fpts_against_decimal)
+      });
+    }
+
+    // Championship / runner-up from winners bracket
+    let championKey = null, runnerUpKey = null, thirdKey = null;
+    const finalGame = winnersBracket.find(g => g.p === 1);
+    if(finalGame){
+      if(finalGame.w != null) championKey = rosterIdToOwnerKey.get(finalGame.w) || null;
+      if(finalGame.l != null) runnerUpKey = rosterIdToOwnerKey.get(finalGame.l) || null;
+    }
+    const thirdGame = winnersBracket.find(g => g.p === 3);
+    if(thirdGame && thirdGame.w != null) thirdKey = rosterIdToOwnerKey.get(thirdGame.w) || null;
+
+    // Playoff participants: any roster that shows up directly as t1/t2 in the
+    // bracket (first-round seeds). Used for the "missed the playoffs by a
+    // hair" Hall of Shame entry.
+    const playoffOwnerKeys = new Set();
+    for(const g of winnersBracket){
+      if(typeof g.t1 === 'number'){ const k = rosterIdToOwnerKey.get(g.t1); if(k) playoffOwnerKeys.add(k); }
+      if(typeof g.t2 === 'number'){ const k = rosterIdToOwnerKey.get(g.t2); if(k) playoffOwnerKeys.add(k); }
+    }
+    if(playoffOwnerKeys.size > 0) PLAYOFF_TEAMS.set(seasonYear, playoffOwnerKeys);
+
+    const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+
+    // Per-season running totals used for power rankings / luck ratings / bench tax
+    const cumWins = new Map(), cumTies = new Map(), cumPF = new Map();
+    const seasonExpectedWins = new Map();
+    const seasonBenchTax = new Map();
+    const playerSeasonPoints = new Map();
+    for(const key of rosterIdToOwnerKey.values()){ cumWins.set(key,0); cumTies.set(key,0); cumPF.set(key,0); seasonExpectedWins.set(key,0); seasonBenchTax.set(key,0); }
+    const seasonPowerWeeks = [];
+
+    weeks.forEach((weekArr, idx) => {
+      const week = idx + 1;
+      if(!Array.isArray(weekArr) || weekArr.length === 0) return;
+      const isPlayoff = week >= playoffStart;
+
+      // ---- Pairing pass: head-to-head game log ----
+      const groups = new Map();
+      for(const entry of weekArr){
+        if(entry.matchup_id == null) continue;
+        if(!groups.has(entry.matchup_id)) groups.set(entry.matchup_id, []);
+        groups.get(entry.matchup_id).push(entry);
+      }
+      for(const group of groups.values()){
+        if(group.length !== 2) continue; // skip byes / median pseudo-groups
+        const [a, b] = group;
+        const keyA = rosterIdToOwnerKey.get(a.roster_id);
+        const keyB = rosterIdToOwnerKey.get(b.roster_id);
+        if(!keyA || !keyB) continue;
+        const pfA = Number(a.points||0), pfB = Number(b.points||0);
+
+        pushGameEntry(keyA, keyB, pfA, pfB, seasonYear, week, isPlayoff);
+        pushGameEntry(keyB, keyA, pfB, pfA, seasonYear, week, isPlayoff);
+        updateH2H(keyA, keyB, pfA, pfB);
+        updateH2H(keyB, keyA, pfB, pfA);
+
+        if(!isPlayoff){
+          if(pfA > pfB) cumWins.set(keyA, cumWins.get(keyA)+1);
+          else if(pfA < pfB) cumWins.set(keyB, cumWins.get(keyB)+1);
+          else { cumTies.set(keyA, cumTies.get(keyA)+1); cumTies.set(keyB, cumTies.get(keyB)+1); }
+        }
+      }
+
+      // ---- Per-roster pass: bench points, player season totals, weekly scores ----
+      const weekAllPoints = [];
+      for(const entry of weekArr){
+        const ownerKey = rosterIdToOwnerKey.get(entry.roster_id);
+        if(!ownerKey) continue;
+        const pf = Number(entry.points||0);
+        weekAllPoints.push({ ownerKey, pf });
+        if(!isPlayoff) cumPF.set(ownerKey, (cumPF.get(ownerKey)||0) + pf);
+
+        const startersSet = new Set((entry.starters||[]).filter(id => id && id !== '0'));
+        const playersPoints = entry.players_points || {};
+        let benchPts = 0;
+        const benchList = [];
+        const starterList = [];
+        for(const pid in playersPoints){
+          const pts = Number(playersPoints[pid])||0;
+          playerSeasonPoints.set(pid, (playerSeasonPoints.get(pid)||0) + pts);
+          if(startersSet.has(pid)) starterList.push({ id: pid, pts });
+          else { benchPts += pts; benchList.push({ id: pid, pts }); }
+        }
+        seasonBenchTax.set(ownerKey, (seasonBenchTax.get(ownerKey)||0) + benchPts);
+
+        if(starterList.length && benchList.length){
+          const minStarter = starterList.reduce((m,c) => c.pts < m.pts ? c : m);
+          const maxBench = benchList.reduce((m,c) => c.pts > m.pts ? c : m);
+          if(maxBench.pts > minStarter.pts){
+            BENCH_BLUNDERS.push({
+              ownerKey, year: seasonYear, week,
+              benchPlayerId: maxBench.id, benchPts: maxBench.pts,
+              starterPlayerId: minStarter.id, starterPts: minStarter.pts,
+              delta: maxBench.pts - minStarter.pts
+            });
+          }
+        }
+      }
+
+      // ---- Luck: expected wins from where this week's score would rank league-wide ----
+      if(!isPlayoff && weekAllPoints.length > 1){
+        const n = weekAllPoints.length;
+        for(const { ownerKey, pf } of weekAllPoints){
+          let beaten = 0;
+          for(const other of weekAllPoints){
+            if(other.ownerKey === ownerKey) continue;
+            if(pf > other.pf) beaten += 1;
+            else if(pf === other.pf) beaten += 0.5;
+          }
+          seasonExpectedWins.set(ownerKey, (seasonExpectedWins.get(ownerKey)||0) + beaten/(n-1));
+        }
+      }
+
+      // ---- Power ranking snapshot for this week ----
+      if(!isPlayoff && weekAllPoints.length > 0){
+        const keysThisWeek = Array.from(new Set(weekAllPoints.map(e => e.ownerKey)));
+        const avgCumPF = keysThisWeek.reduce((sum,k) => sum + (cumPF.get(k)||0), 0) / keysThisWeek.length || 1;
+        const ranked = keysThisWeek.map(k => {
+          const score = 2*(cumWins.get(k)||0) + 1*(cumTies.get(k)||0) + ((cumPF.get(k)||0) / (avgCumPF||1));
+          return { ownerKey: k, score };
+        }).sort((a,b) => b.score - a.score);
+        ranked.forEach((r,i) => r.rank = i+1);
+        seasonPowerWeeks.push({ week, ranked });
+      }
+    });
+
+    POWER_RANKINGS.set(seasonYear, seasonPowerWeeks);
+
+    // Store this season's luck and bench-tax numbers, keyed by year (career
+    // totals are computed on demand by summing across years — see luckFor()
+    // and benchTaxFor() below).
+    for(const ownerKey of rosterIdToOwnerKey.values()){
+      const actualWins = GAME_ENTRIES.filter(g => g.teamKey === ownerKey && g.season === seasonYear && !g.isPlayoff && g.pf > g.pa).length;
+      if(!LUCK.has(ownerKey)) LUCK.set(ownerKey, new Map());
+      LUCK.get(ownerKey).set(seasonYear, { actualWins, expectedWins: seasonExpectedWins.get(ownerKey)||0 });
+
+      if(!BENCH_TAX.has(ownerKey)) BENCH_TAX.set(ownerKey, new Map());
+      BENCH_TAX.get(ownerKey).set(seasonYear, seasonBenchTax.get(ownerKey)||0);
+    }
+
+    // Championship game score, for Hall of Shame "letdown" entries
+    if(championKey && runnerUpKey){
+      const champGame = GAME_ENTRIES
+        .filter(g => g.season === seasonYear && g.isPlayoff && g.teamKey === runnerUpKey && g.oppKey === championKey)
+        .sort((a,b) => b.week - a.week)[0];
+      if(champGame){
+        CHAMP_GAMES.push({ year: seasonYear, champKey: championKey, champPts: champGame.pa, runnerKey: runnerUpKey, runnerPts: champGame.pf });
+      }
+    }
+
+    // Transactions: trades, waiver adds, free-agent adds per team, plus a
+    // human-readable log of each individual transaction for the Transactions tab.
+    const seasonLog = [];
+    transactions.forEach((weekTx, txIdx) => {
+      if(!Array.isArray(weekTx)) return;
+      const week = txIdx + 1;
+      for(const tx of weekTx){
+        if(tx.status !== 'complete') continue;
+        if(tx.type === 'trade'){
+          for(const rid of (tx.roster_ids||[])){
+            const ok = rosterIdToOwnerKey.get(rid);
+            if(ok) bumpTx(ok, 'trades', seasonYear);
+          }
+          const sides = describeTrade(tx, rosterIdToOwnerKey);
+          if(sides.length) seasonLog.push({ type:'trade', week, sides });
+        } else if(tx.type === 'waiver' || tx.type === 'free_agent'){
+          const field = tx.type === 'waiver' ? 'waiverAdds' : 'faAdds';
+          const byRoster = new Map();
+          for(const pid in (tx.adds||{})){
+            const rid = tx.adds[pid];
+            const ok = rosterIdToOwnerKey.get(rid);
+            if(ok){
+              bumpTx(ok, field, seasonYear);
+              if(!byRoster.has(ok)) byRoster.set(ok, { ownerKey: ok, added: [], dropped: [] });
+              byRoster.get(ok).added.push(pid);
+            }
+          }
+          for(const pid in (tx.drops||{})){
+            const rid = tx.drops[pid];
+            const ok = rosterIdToOwnerKey.get(rid);
+            if(ok){
+              if(!byRoster.has(ok)) byRoster.set(ok, { ownerKey: ok, added: [], dropped: [] });
+              byRoster.get(ok).dropped.push(pid);
+            }
+          }
+          for(const entry of byRoster.values()){
+            seasonLog.push({ type: tx.type, week, ownerKey: entry.ownerKey, added: entry.added, dropped: entry.dropped, faabSpent: tx.settings && tx.settings.waiver_bid });
+          }
+        }
+      }
+    });
+    if(seasonLog.length) TRANSACTIONS_LOG.set(seasonYear, seasonLog);
+
+    // Draft picks, graded by how many fantasy points that player produced this season
+    const seasonDraft = [];
+    for(const pick of (draftPicks||[])){
+      const ownerKey = rosterIdToOwnerKey.get(pick.roster_id);
+      if(!ownerKey) continue;
+      seasonDraft.push({
+        ownerKey, round: pick.round, pickNo: pick.pick_no, draftSlot: pick.draft_slot || null,
+        playerId: pick.player_id, isKeeper: !!pick.is_keeper,
+        seasonPoints: playerSeasonPoints.get(pick.player_id) || 0
+      });
+    }
+    if(seasonDraft.length) DRAFTS.set(seasonYear, seasonDraft.sort((a,b) => (a.round-b.round) || (a.pickNo-b.pickNo)));
+
+    SEASONS.push({
+      year: seasonYear,
+      leagueId: league.league_id,
+      name: league.name,
+      avatar: league.avatar ? AVATAR(league.avatar) : null,
+      standings,
+      championKey, runnerUpKey, thirdKey
+    });
+
+    for(const s of standings){
+      TEAMS.get(s.ownerKey).seasons.push({ year: seasonYear, ...s });
+    }
+  }
+
+  BENCH_BLUNDERS.sort((a,b) => b.delta - a.delta);
+}
+
+function pushGameEntry(teamKey, oppKey, pf, pa, season, week, isPlayoff){
+  GAME_ENTRIES.push({ teamKey, oppKey, pf, pa, margin: pf - pa, season, week, isPlayoff, sortKey: season*100+week });
+}
+function updateH2H(teamKey, oppKey, pf, pa){
+  if(!H2H.has(teamKey)) H2H.set(teamKey, new Map());
+  const m = H2H.get(teamKey);
+  if(!m.has(oppKey)) m.set(oppKey, {w:0,l:0,t:0,pf:0,pa:0});
+  const rec = m.get(oppKey);
+  rec.pf += pf; rec.pa += pa;
+  if(pf > pa) rec.w++; else if(pf < pa) rec.l++; else rec.t++;
+}
+function bumpTx(ownerKey, field, year){
+  if(!TX_STATS.has(ownerKey)) TX_STATS.set(ownerKey, new Map());
+  const byYear = TX_STATS.get(ownerKey);
+  if(!byYear.has(year)) byYear.set(year, { trades:0, waiverAdds:0, faAdds:0 });
+  byYear.get(year)[field] += 1;
+}
+function describeTrade(tx, rosterIdToOwnerKey){
+  const sides = new Map(); // rosterId -> {ownerKey, receives:[], sends:[]}
+  for(const rid of (tx.roster_ids||[])){
+    const ok = rosterIdToOwnerKey.get(rid);
+    if(ok) sides.set(rid, { ownerKey: ok, receives: [], sends: [] });
+  }
+  for(const pid in (tx.adds||{})){
+    const rid = tx.adds[pid];
+    if(sides.has(rid)) sides.get(rid).receives.push({ type:'player', id:pid });
+  }
+  for(const pid in (tx.drops||{})){
+    const rid = tx.drops[pid];
+    if(sides.has(rid)) sides.get(rid).sends.push({ type:'player', id:pid });
+  }
+  for(const dp of (tx.draft_picks||[])){
+    if(dp.owner_id != null && sides.has(dp.owner_id)) sides.get(dp.owner_id).receives.push({ type:'pick', season:dp.season, round:dp.round });
+    if(dp.previous_owner_id != null && sides.has(dp.previous_owner_id)) sides.get(dp.previous_owner_id).sends.push({ type:'pick', season:dp.season, round:dp.round });
+  }
+  return Array.from(sides.values()).filter(s => s.receives.length || s.sends.length);
+}
+function assetLabel(a){
+  return a.type === 'pick' ? `${a.season} round ${a.round} pick` : playerLabel(a.id);
+}
+function playerLabel(playerId){
+  const p = PLAYERS.get(playerId);
+  if(!p) return `Player ${playerId}`;
+  return `${p.name}${p.position ? ' ('+p.position+(p.team?(' '+p.team):'')+')' : ''}`;
+}
+function benchTaxFor(ownerKey, year){
+  const byYear = BENCH_TAX.get(ownerKey);
+  if(!byYear) return 0;
+  if(year == null) return Array.from(byYear.values()).reduce((s,v)=>s+v,0);
+  return byYear.get(year) || 0;
+}
+function luckFor(ownerKey, year){
+  const byYear = LUCK.get(ownerKey);
+  if(!byYear) return { actualWins:0, expectedWins:0 };
+  if(year == null){
+    let actualWins=0, expectedWins=0;
+    for(const v of byYear.values()){ actualWins+=v.actualWins; expectedWins+=v.expectedWins; }
+    return { actualWins, expectedWins };
+  }
+  return byYear.get(year) || { actualWins:0, expectedWins:0 };
+}
+function txStatsFor(ownerKey, year){
+  const byYear = TX_STATS.get(ownerKey);
+  if(!byYear) return { trades:0, waiverAdds:0, faAdds:0 };
+  if(year == null){
+    let trades=0, waiverAdds=0, faAdds=0;
+    for(const v of byYear.values()){ trades+=v.trades; waiverAdds+=v.waiverAdds; faAdds+=v.faAdds; }
+    return { trades, waiverAdds, faAdds };
+  }
+  return byYear.get(year) || { trades:0, waiverAdds:0, faAdds:0 };
+}
+
+function careerStats(ownerKey){
+  const team = TEAMS.get(ownerKey);
+  let wins=0, losses=0, ties=0, pf=0, pa=0, championships=0, runnerUps=0, seasonsPlayed=team.seasons.length;
+  for(const s of team.seasons){ wins+=s.wins; losses+=s.losses; ties+=s.ties; pf+=s.pf; pa+=s.pa; }
+  for(const season of SEASONS){
+    if(season.championKey === ownerKey) championships++;
+    if(season.runnerUpKey === ownerKey) runnerUps++;
+  }
+  return { wins, losses, ties, pf, pa, championships, runnerUps, seasonsPlayed, winPct: pct(wins,losses,ties) };
+}
+
+function computeStreaks(ownerKey){
+  const entries = GAME_ENTRIES.filter(g => g.teamKey === ownerKey).sort((a,b)=>a.sortKey-b.sortKey);
+  let curW=0, curL=0, maxW=0, maxL=0;
+  for(const g of entries){
+    if(g.pf > g.pa){ curW++; curL=0; } else if(g.pf < g.pa){ curL++; curW=0; } else { curW=0; curL=0; }
+    maxW = Math.max(maxW, curW); maxL = Math.max(maxL, curL);
+  }
+  return { maxW, maxL };
+}
+
+// -------------------- RENDERING --------------------
+
+function teamLabel(ownerKey, size){
+  const t = TEAMS.get(ownerKey);
+  if(!t) return `<span class="team-cell">Unknown</span>`;
+  return `<span class="team-cell">${teamAvatarHtml(t, size)}<span>${escapeHtml(t.name)}</span></span>`;
+}
+
+function renderMasthead(){
+  const latest = SEASONS[SEASONS.length-1];
+  const earliest = SEASONS[0];
+  document.getElementById('league-name').textContent = latest.name || 'League Ledger';
+  document.getElementById('league-sub').textContent =
+    `${earliest.year}\u2013${latest.year} \u00b7 ${SEASONS.length} season${SEASONS.length>1?'s':''} of record`;
+  document.querySelector('.eyebrow').textContent = `Est. ${earliest.year}`;
+  if(latest.avatar){
+    const img = document.createElement('img');
+    img.src = latest.avatar; img.className = 'league-avatar'; img.alt = '';
+    document.getElementById('masthead').prepend(img);
+  }
+  document.getElementById('tabs').style.display = 'flex';
+}
+
+function allTimeStandingsRows(){
+  return Array.from(TEAMS.keys()).map(k => ({ ownerKey:k, ...careerStats(k) }))
+    .sort((a,b) => (b.winPct - a.winPct) || (b.championships - a.championships) || (b.pf - a.pf));
+}
+
+function renderOverview(){
+  const rows = allTimeStandingsRows();
+  const trophies = SEASONS.slice().reverse().map(s => {
+    const champ = s.championKey ? TEAMS.get(s.championKey) : null;
+    const runner = s.runnerUpKey ? TEAMS.get(s.runnerUpKey) : null;
+    return `<div class="trophy-plate">
+      <div class="year">${s.year}</div>
+      <div class="champ">${champ ? escapeHtml(champ.name) : 'Unreported'}</div>
+      <div class="note">${runner ? 'def. ' + escapeHtml(runner.name) : '&nbsp;'}</div>
+    </div>`;
+  }).join('');
+
+  const standingsRows = rows.map((r,i) => {
+    const t = TEAMS.get(r.ownerKey);
+    return `<tr>
+      <td class="num"><span class="rank-badge">${i+1}</span></td>
+      <td>${teamLabel(r.ownerKey)}</td>
+      <td class="num">${r.wins}-${r.losses}${r.ties?('-'+r.ties):''}</td>
+      <td class="num">${fmt3(r.winPct)}</td>
+      <td class="num">${r.championships ? '\uD83C\uDFC6 '.repeat(Math.min(r.championships,3)) + (r.championships>3?`(${r.championships})`:'') : '&mdash;'}</td>
+      <td class="num">${fmt1(r.pf)}</td>
+      <td class="num">${fmt1(r.pa)}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <h2 class="section-title">Trophy Case</h2>
+    <div class="trophy-strip">${trophies}</div>
+
+    <h2 class="section-title" style="margin-top:22px;">All-Time Standings</h2>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr>
+        <th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">Win%</th>
+        <th class="num">Rings</th><th class="num">PF</th><th class="num">PA</th>
+      </tr></thead>
+      <tbody>${standingsRows}</tbody>
+    </table>
+    </div>
+    <p class="muted" style="margin-top:10px;">Ranked by all-time win percentage, then championships, then points scored.</p>
+  `;
+}
+
+function renderSeasons(){
+  const cards = SEASONS.slice().reverse().map(season => {
+    const sorted = season.standings.slice().sort((a,b) => (b.wins-a.wins) || (b.pf-a.pf));
+    const champ = season.championKey ? TEAMS.get(season.championKey) : null;
+    const rows = sorted.map((s,i) => `
+      <tr>
+        <td class="num"><span class="rank-badge">${i+1}</span></td>
+        <td>${teamLabel(s.ownerKey,'sm')}</td>
+        <td class="num">${s.wins}-${s.losses}${s.ties?('-'+s.ties):''}</td>
+        <td class="num">${fmt1(s.pf)}</td>
+        <td class="num">${fmt1(s.pa)}</td>
+      </tr>`).join('');
+
+    const powerWeeks = POWER_RANKINGS.get(season.year) || [];
+    const finalPower = powerWeeks.length ? powerWeeks[powerWeeks.length-1] : null;
+    const powerBlock = finalPower ? `
+      <div class="subhead">Power Rankings &middot; through week ${finalPower.week}</div>
+      <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th class="num">#</th><th>Team</th><th class="num">Power Score</th></tr></thead>
+        <tbody>${finalPower.ranked.map(r => `
+          <tr><td class="num"><span class="rank-badge">${r.rank}</span></td><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${fmt1(r.score)}</td></tr>`).join('')}</tbody>
+      </table>
+      </div>
+      <p class="muted" style="margin-top:6px;">Power score blends record (2 pts/win, 1/tie) with points scored relative to league average &mdash; it can rank teams differently than raw standings.</p>
+    ` : '';
+
+    return `
+      <div class="card season-card">
+        <div class="season-head">
+          <div class="yr">${season.year}</div>
+          <div class="champ-line">${champ ? '\uD83C\uDFC6 ' + escapeHtml(champ.name) + ' &mdash; League Champion' : 'Champion not recorded'}</div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        </div>
+        ${powerBlock}
+      </div>`;
+  }).join('');
+  return `<h2 class="section-title">Season by Season</h2>${cards}`;
+}
+
+function renderH2H(){
+  const keys = Array.from(TEAMS.keys()).sort((a,b) => TEAMS.get(a).name.localeCompare(TEAMS.get(b).name));
+  const header = keys.map(k => `<th>${escapeHtml(TEAMS.get(k).name.split(' ')[0])}</th>`).join('');
+  const rows = keys.map(rowKey => {
+    const cells = keys.map(colKey => {
+      if(rowKey === colKey) return `<td class="rowlabel diag">&mdash;</td>`;
+      const rec = H2H.get(rowKey) && H2H.get(rowKey).get(colKey);
+      if(!rec) return `<td><span class="stamp blank">&ndash;</span></td>`;
+      const cls = rec.w > rec.l ? 'win-heavy' : rec.w < rec.l ? 'loss-heavy' : 'even';
+      const label = `${rec.w}-${rec.l}${rec.t?('-'+rec.t):''}`;
+      return `<td><span class="stamp ${cls}">${label}</span></td>`;
+    }).join('');
+    return `<tr><td class="rowlabel">${teamLabel(rowKey,'sm')}</td>${cells}</tr>`;
+  }).join('');
+  const options = keys.map(k => `<option value="${k}">${escapeHtml(TEAMS.get(k).name)}</option>`).join('');
+
+  return `
+    <h2 class="section-title">All-Time Head-to-Head</h2>
+    <p class="muted" style="margin-bottom:14px;">Row team's record against column team, regular season and playoffs combined.</p>
+    <div class="h2h-scroll">
+    <table class="h2h">
+      <thead><tr><th class="rowlabel">&nbsp;</th>${header}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+
+    <h2 class="section-title" style="margin-top:26px;">Rivalry Lookup</h2>
+    <div class="select-row">
+      <select id="rivalry-a">${options}</select>
+      <span class="vs">vs</span>
+      <select id="rivalry-b">${options}</select>
+    </div>
+    <div id="rivalry-log"></div>
+  `;
+}
+
+function renderRivalryLog(keyA, keyB){
+  if(keyA === keyB) return `<p class="muted">Pick two different teams to see their history.</p>`;
+  const games = GAME_ENTRIES.filter(g => g.teamKey === keyA && g.oppKey === keyB).sort((a,b) => a.sortKey - b.sortKey);
+  if(games.length === 0) return `<p class="muted">${escapeHtml(TEAMS.get(keyA).name)} and ${escapeHtml(TEAMS.get(keyB).name)} haven't played each other.</p>`;
+  const rec = H2H.get(keyA).get(keyB);
+  const rows = games.map(g => `
+    <tr>
+      <td class="num">${g.season}</td>
+      <td class="num">wk${g.week}${g.isPlayoff?' (playoffs)':''}</td>
+      <td class="num">${fmt1(g.pf)}</td>
+      <td class="num">${fmt1(g.pa)}</td>
+      <td>${g.pf > g.pa ? `<span class="pill">${escapeHtml(TEAMS.get(keyA).name)} won</span>` : g.pf < g.pa ? `<span class="pill bad">${escapeHtml(TEAMS.get(keyB).name)} won</span>` : `<span class="pill">Tie</span>`}</td>
+    </tr>`).join('');
+  return `
+    <div class="card">
+      <h3 class="card-title">${escapeHtml(TEAMS.get(keyA).name)} vs ${escapeHtml(TEAMS.get(keyB).name)} &mdash; ${rec.w}-${rec.l}${rec.t?('-'+rec.t):''}</h3>
+      <table><thead><tr><th class="num">Year</th><th class="num">Week</th><th class="num">PF</th><th class="num">PA</th><th>Result</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+}
+
+function renderRecords(){
+  const winnersOnly = GAME_ENTRIES.filter(g => g.margin > 0);
+  const highest = GAME_ENTRIES.slice().sort((a,b)=>b.pf-a.pf).slice(0,5);
+  const lowest = GAME_ENTRIES.slice().sort((a,b)=>a.pf-b.pf).slice(0,5);
+  const blowouts = winnersOnly.slice().sort((a,b)=>b.margin-a.margin).slice(0,5);
+  const closest = winnersOnly.slice().sort((a,b)=>a.margin-b.margin).slice(0,5);
+
+  const gameLine = (g, showMargin) => `
+    <li>
+      <span class="who">${teamLabel(g.teamKey,'sm')}<span class="muted">vs ${TEAMS.get(g.oppKey)?escapeHtml(TEAMS.get(g.oppKey).name):'Unknown'} &middot; ${g.season}${g.isPlayoff?' playoffs':''} wk${g.week}</span></span>
+      <span class="amt">${showMargin ? fmt1(g.margin) : fmt1(g.pf)}</span>
+    </li>`;
+
+  const listBlock = (title, items, showMargin) => `
+    <div class="card">
+      <h3 class="card-title">${title}</h3>
+      <ul class="record-list">${items.map(g=>gameLine(g,showMargin)).join('') || '<li class="muted">No data yet</li>'}</ul>
+    </div>`;
+
+  // season-level records
+  const seasonRows = [];
+  for(const team of TEAMS.values()){
+    for(const s of team.seasons){
+      seasonRows.push({ ownerKey: team.ownerKey, year: s.year, pf: s.pf, pa: s.pa, winPct: pct(s.wins,s.losses,s.ties), record: `${s.wins}-${s.losses}${s.ties?('-'+s.ties):''}` });
+    }
+  }
+  const bestSeasonPts = seasonRows.slice().sort((a,b)=>b.pf-a.pf).slice(0,3);
+  const worstSeasonPts = seasonRows.slice().sort((a,b)=>a.pf-b.pf).slice(0,3);
+  const bestRecordSeason = seasonRows.slice().sort((a,b)=>b.winPct-a.winPct).slice(0,3);
+  const worstRecordSeason = seasonRows.slice().sort((a,b)=>a.winPct-b.winPct).slice(0,3);
+
+  const seasonLine = (r, valueLabel) => `
+    <li>
+      <span class="who">${teamLabel(r.ownerKey,'sm')}<span class="muted">${r.year} &middot; ${r.record}</span></span>
+      <span class="amt">${valueLabel(r)}</span>
+    </li>`;
+
+  const seasonBlock = (title, items, valueLabel) => `
+    <div class="card">
+      <h3 class="card-title">${title}</h3>
+      <ul class="record-list">${items.map(r=>seasonLine(r,valueLabel)).join('') || '<li class="muted">No data yet</li>'}</ul>
+    </div>`;
+
+  // streaks
+  let bestWinStreak = {ownerKey:null, val:0}, bestLossStreak = {ownerKey:null, val:0};
+  for(const key of TEAMS.keys()){
+    const s = computeStreaks(key);
+    if(s.maxW > bestWinStreak.val) bestWinStreak = {ownerKey:key, val:s.maxW};
+    if(s.maxL > bestLossStreak.val) bestLossStreak = {ownerKey:key, val:s.maxL};
+  }
+
+  return `
+    <h2 class="section-title">The Record Book</h2>
+    <div class="grid-2">
+      ${listBlock('Highest Single-Game Scores', highest, false)}
+      ${listBlock('Lowest Single-Game Scores', lowest, false)}
+      ${listBlock('Biggest Blowouts', blowouts, true)}
+      ${listBlock('Closest Finishes', closest, true)}
+      ${seasonBlock('Most Points, Single Season', bestSeasonPts, r=>fmt1(r.pf))}
+      ${seasonBlock('Fewest Points, Single Season', worstSeasonPts, r=>fmt1(r.pf))}
+      ${seasonBlock('Best Season Record', bestRecordSeason, r=>fmt3(r.winPct))}
+      ${seasonBlock('Worst Season Record', worstRecordSeason, r=>fmt3(r.winPct))}
+    </div>
+    <div class="card">
+      <h3 class="card-title">Streaks</h3>
+      <ul class="record-list">
+        <li><span class="who">${bestWinStreak.ownerKey ? teamLabel(bestWinStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest win streak</span></span><span class="amt">${bestWinStreak.val} games</span></li>
+        <li><span class="who">${bestLossStreak.ownerKey ? teamLabel(bestLossStreak.ownerKey,'sm') : 'N/A'}<span class="muted">Longest losing streak</span></span><span class="amt">${bestLossStreak.val} games</span></li>
+      </ul>
+    </div>
+
+    <h2 class="section-title" style="margin-top:26px;">Postseason Only</h2>
+    ${renderPostseasonBlock()}
+  `;
+}
+
+function renderPostseasonBlock(){
+  const playoffGames = GAME_ENTRIES.filter(g => g.isPlayoff);
+  if(playoffGames.length === 0) return `<p class="muted">No playoff data recorded yet.</p>`;
+
+  const highest = playoffGames.slice().sort((a,b)=>b.pf-a.pf).slice(0,5);
+  const lowest = playoffGames.slice().sort((a,b)=>a.pf-b.pf).slice(0,5);
+
+  const gameLine = (g) => `
+    <li>
+      <span class="who">${teamLabel(g.teamKey,'sm')}<span class="muted">vs ${TEAMS.get(g.oppKey)?escapeHtml(TEAMS.get(g.oppKey).name):'Unknown'} &middot; ${g.season} wk${g.week}</span></span>
+      <span class="amt">${fmt1(g.pf)}</span>
+    </li>`;
+
+  const byTeam = new Map();
+  for(const g of playoffGames){
+    if(!byTeam.has(g.teamKey)) byTeam.set(g.teamKey, { w:0, l:0, t:0 });
+    const r = byTeam.get(g.teamKey);
+    if(g.pf > g.pa) r.w++; else if(g.pf < g.pa) r.l++; else r.t++;
+  }
+  const teamRows = Array.from(byTeam.entries())
+    .map(([k,r]) => ({ ownerKey:k, ...r, pct: pct(r.w,r.l,r.t) }))
+    .sort((a,b) => b.pct - a.pct)
+    .map(r => `<tr><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${r.w}-${r.l}${r.t?('-'+r.t):''}</td><td class="num">${fmt3(r.pct)}</td></tr>`).join('');
+
+  return `
+    <div class="grid-2">
+      <div class="card"><h3 class="card-title">Highest Playoff Scores</h3><ul class="record-list">${highest.map(gameLine).join('')}</ul></div>
+      <div class="card"><h3 class="card-title">Lowest Playoff Scores</h3><ul class="record-list">${lowest.map(gameLine).join('')}</ul></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">All-Time Playoff Record</h3>
+      <table><thead><tr><th>Team</th><th class="num">Record</th><th class="num">Win%</th></tr></thead><tbody>${teamRows}</tbody></table>
+    </div>
+  `;
+}
+
+function renderTeams(){
+  const cards = Array.from(TEAMS.keys())
+    .sort((a,b) => TEAMS.get(a).name.localeCompare(TEAMS.get(b).name))
+    .map(key => {
+      const t = TEAMS.get(key);
+      const c = careerStats(key);
+      return `
+        <div class="team-card" data-owner="${key}">
+          <div class="thead">${teamAvatarHtml(t)}<div>
+            <div class="tname">${escapeHtml(t.name)}</div>
+            <div class="trecord">${c.wins}-${c.losses}${c.ties?('-'+c.ties):''} &middot; ${fmt3(c.winPct)}</div>
+          </div></div>
+          <div class="rings">${c.championships ? '\uD83C\uDFC6'.repeat(c.championships) : '<span class="muted">No rings yet</span>'}</div>
+        </div>`;
+    }).join('');
+  return `<h2 class="section-title">Franchises</h2><div class="team-grid" id="team-grid">${cards}</div><div id="team-detail-slot"></div>`;
+}
+
+function renderTeamDetail(ownerKey){
+  const t = TEAMS.get(ownerKey);
+  const c = careerStats(ownerKey);
+  const streak = computeStreaks(ownerKey);
+  const seasonRows = t.seasons.slice().sort((a,b)=>b.year-a.year).map(s => `
+    <tr><td class="num">${s.year}</td><td class="num">${s.wins}-${s.losses}${s.ties?('-'+s.ties):''}</td>
+    <td class="num">${fmt1(s.pf)}</td><td class="num">${fmt1(s.pa)}</td></tr>`).join('');
+
+  const rivals = Array.from((H2H.get(ownerKey) || new Map()).entries())
+    .map(([oppKey, rec]) => ({ oppKey, ...rec, games: rec.w+rec.l+rec.t }))
+    .sort((a,b) => b.games - a.games);
+  const rivalRows = rivals.map(r => `
+    <tr><td>${teamLabel(r.oppKey,'sm')}</td><td class="num">${r.w}-${r.l}${r.t?('-'+r.t):''}</td>
+    <td class="num">${fmt1(r.pf)}</td><td class="num">${fmt1(r.pa)}</td></tr>`).join('');
+
+  const luck = luckFor(ownerKey, null);
+  const luckDelta = luck.actualWins - luck.expectedWins;
+  const bench = benchTaxFor(ownerKey, null);
+  const tx = txStatsFor(ownerKey, null);
+
+  return `
+    <div class="card team-detail">
+      <div class="thead" style="margin-bottom:10px;">${teamAvatarHtml(t)}<div>
+        <div class="tname" style="font-size:20px;">${escapeHtml(t.name)}</div>
+        <div class="trecord">${c.seasonsPlayed} seasons &middot; ${c.wins}-${c.losses}${c.ties?('-'+c.ties):''} career &middot; ${c.championships} rings &middot; longest win streak ${streak.maxW}</div>
+      </div></div>
+
+      <div class="award-grid" style="margin-bottom:18px;">
+        <div class="award-card"><div class="award-name">Luck (actual vs. expected wins)</div><div class="award-stat" style="margin-top:8px;">${luck.actualWins} vs. ${fmt1(luck.expectedWins)} (${luckDelta>=0?'+':''}${fmt1(luckDelta)})</div></div>
+        <div class="award-card"><div class="award-name">Bench Points Stranded</div><div class="award-stat" style="margin-top:8px;">${fmt1(bench)} pts, career</div></div>
+        <div class="award-card"><div class="award-name">Roster Moves</div><div class="award-stat" style="margin-top:8px;">${tx.trades} trades &middot; ${tx.waiverAdds} waiver &middot; ${tx.faAdds} FA</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h3 class="card-title">Season by Season</h3>
+          <table><thead><tr><th class="num">Year</th><th class="num">Record</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
+          <tbody>${seasonRows}</tbody></table>
+        </div>
+        <div>
+          <h3 class="card-title">Head-to-Head</h3>
+          <table><thead><tr><th>Opponent</th><th class="num">Record</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
+          <tbody>${rivalRows}</tbody></table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ---- Draft tab: season selector + grid board + all-time tendencies ----
+
+function draftTendencies(){
+  // All-time, across every season on record: which position and which NFL
+  // team a manager tends to draft most often.
+  const byOwner = new Map(); // ownerKey -> { positions: Map, teams: Map, totalPicks }
+  for(const picks of DRAFTS.values()){
+    for(const p of picks){
+      if(!byOwner.has(p.ownerKey)) byOwner.set(p.ownerKey, { positions: new Map(), teams: new Map(), totalPicks: 0 });
+      const rec = byOwner.get(p.ownerKey);
+      rec.totalPicks += 1;
+      const meta = PLAYERS.get(p.playerId);
+      if(meta && meta.position){ rec.positions.set(meta.position, (rec.positions.get(meta.position)||0) + 1); }
+      if(meta && meta.team){ rec.teams.set(meta.team, (rec.teams.get(meta.team)||0) + 1); }
+    }
+  }
+  const topOf = (map) => {
+    let best = null;
+    for(const [k,v] of map.entries()){ if(!best || v > best[1]) best = [k,v]; }
+    return best;
+  };
+  return Array.from(byOwner.entries()).map(([ownerKey, rec]) => {
+    const topPos = topOf(rec.positions);
+    const topTeam = topOf(rec.teams);
+    return { ownerKey, totalPicks: rec.totalPicks, topPos, topTeam };
+  }).sort((a,b) => b.totalPicks - a.totalPicks);
+}
+
+function renderDraftTendencies(){
+  const rows = draftTendencies();
+  if(rows.length === 0) return '';
+  const body = rows.map(r => `
+    <tr>
+      <td>${teamLabel(r.ownerKey,'sm')}</td>
+      <td>${r.topPos ? `${escapeHtml(r.topPos[0])} <span class="muted">(${r.topPos[1]} of ${r.totalPicks})</span>` : '&mdash;'}</td>
+      <td>${r.topTeam ? `${escapeHtml(r.topTeam[0])} <span class="muted">(${r.topTeam[1]} of ${r.totalPicks})</span>` : '&mdash;'}</td>
+      <td class="num">${r.totalPicks}</td>
+    </tr>`).join('');
+  return `
+    <div class="card">
+      <h3 class="card-title">Draft Tendencies (All-Time)</h3>
+      <table><thead><tr><th>Team</th><th>Favorite Position</th><th>Favorite NFL Team</th><th class="num">Total Picks</th></tr></thead>
+      <tbody>${body}</tbody></table>
+      <p class="muted" style="margin-top:8px;">Based on every pick a manager has made across every drafted season on record.</p>
+    </div>`;
+}
+
+function renderDraftBoard(year){
+  const picks = DRAFTS.get(year);
+  if(!picks || picks.length === 0) return `<p class="muted">No draft recorded for ${year}.</p>`;
+
+  const season = SEASONS.find(s => s.year === year);
+  const numTeams = season ? season.standings.length : new Set(picks.map(p=>p.ownerKey)).size;
+  const rounds = Array.from(new Set(picks.map(p=>p.round))).sort((a,b)=>a-b);
+
+  // Prefer Sleeper's own draft_slot (stable per team all draft long); fall
+  // back to computing it from the overall pick number if it's missing.
+  const slotOf = (p) => p.draftSlot || (((p.pickNo-1) % numTeams) + 1);
+  const slots = Array.from(new Set(picks.map(slotOf))).sort((a,b)=>a-b);
+
+  const grid = new Map(); // "round-slot" -> pick
+  for(const p of picks) grid.set(`${p.round}-${slotOf(p)}`, p);
+
+  const slotOwner = new Map(); // slot -> ownerKey (from round 1, or whichever round has it)
+  for(const p of picks){ const s = slotOf(p); if(!slotOwner.has(s)) slotOwner.set(s, p.ownerKey); }
+
+  const header = slots.map(s => `<th>${slotOwner.has(s) ? escapeHtml(TEAMS.get(slotOwner.get(s)).name.split(' ')[0]) : 'Slot '+s}</th>`).join('');
+  const rows = rounds.map(r => {
+    const cells = slots.map(s => {
+      const p = grid.get(`${r}-${s}`);
+      if(!p) return `<td class="draft-cell empty">&mdash;</td>`;
+      return `<td class="draft-cell">
+        <div class="draft-pick-player">${escapeHtml(playerLabel(p.playerId))}${p.isKeeper ? '<span class="keeper-badge">KEPT</span>' : ''}</div>
+        <div class="draft-pick-pts muted">${fmt1(p.seasonPoints)} pts</div>
+      </td>`;
+    }).join('');
+    return `<tr><td class="num round-label">R${r}</td>${cells}</tr>`;
+  }).join('');
+
+  const lateRound = picks.filter(p => p.round >= 4);
+  const earlyRound = picks.filter(p => p.round <= 2);
+  const steal = lateRound.length ? lateRound.reduce((m,c) => c.seasonPoints > m.seasonPoints ? c : m) : null;
+  const bust = earlyRound.length ? earlyRound.reduce((m,c) => c.seasonPoints < m.seasonPoints ? c : m) : null;
+
+  return `
+    ${steal ? `<p class="muted">Steal of the draft: <strong>${escapeHtml(playerLabel(steal.playerId))}</strong> (round ${steal.round}, ${fmt1(steal.seasonPoints)} pts) to ${escapeHtml(TEAMS.get(steal.ownerKey).name)}</p>` : ''}
+    ${bust ? `<p class="muted">Biggest bust: <strong>${escapeHtml(playerLabel(bust.playerId))}</strong> (round ${bust.round}, ${fmt1(bust.seasonPoints)} pts) to ${escapeHtml(TEAMS.get(bust.ownerKey).name)}</p>` : ''}
+    <div class="h2h-scroll" style="margin-top:10px;">
+    <table class="draft-board">
+      <thead><tr><th>&nbsp;</th>${header}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+  `;
+}
+
+function renderDraft(){
+  const years = Array.from(DRAFTS.keys()).sort((a,b) => b-a);
+  if(years.length === 0) return `<h2 class="section-title">Draft History</h2><p class="muted">No draft data recorded yet.</p>`;
+
+  const options = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  return `
+    <h2 class="section-title">Draft History</h2>
+    ${renderDraftTendencies()}
+    <div class="select-row" style="margin-top:20px;">
+      <select id="draft-year">${options}</select>
+    </div>
+    <p class="muted" style="margin-bottom:10px;">"pts" is total fantasy points that player produced the year they were drafted &mdash; a rough hindsight grade, independent of who ended up rostering them after trades.</p>
+    <div id="draft-board"></div>
+  `;
+}
+
+// ---- Transactions tab: season selector + summary + detailed log ----
+
+function renderTransactionSummary(year){
+  const rows = Array.from(TEAMS.keys()).map(k => {
+    const t = txStatsFor(k, year);
+    return { ownerKey:k, ...t, total: t.trades + t.waiverAdds + t.faAdds };
+  }).sort((a,b) => b.total - a.total);
+
+  if(rows.every(r => r.total === 0)) return { html: `<p class="muted">No transaction data ${year==null?'recorded yet':'for '+year}.</p>`, mostActive: null };
+
+  const mostActive = rows[0];
+  const tableRows = rows.map(r => `
+    <tr>
+      <td>${teamLabel(r.ownerKey,'sm')}</td>
+      <td class="num">${r.trades}</td>
+      <td class="num">${r.waiverAdds}</td>
+      <td class="num">${r.faAdds}</td>
+      <td class="num">${r.total}</td>
+    </tr>`).join('');
+
+  const html = `
+    <div class="award-grid" style="margin-bottom:20px;">
+      <div class="award-card">
+        <div class="award-name">Most Active GM${year!=null?' &middot; '+year:''}</div>
+        <div class="award-winner">${teamAvatarHtml(TEAMS.get(mostActive.ownerKey))}<span class="tname">${escapeHtml(TEAMS.get(mostActive.ownerKey).name)}</span></div>
+        <div class="award-stat">${mostActive.total} total moves</div>
+      </div>
+    </div>
+    <div class="card">
+      <table><thead><tr><th>Team</th><th class="num">Trades</th><th class="num">Waiver Adds</th><th class="num">FA Adds</th><th class="num">Total</th></tr></thead>
+      <tbody>${tableRows}</tbody></table>
+    </div>`;
+  return { html, mostActive };
+}
+
+function renderTransactionLog(year){
+  const log = TRANSACTIONS_LOG.get(year);
+  if(!log || log.length === 0) return `<p class="muted" style="margin-top:16px;">No individual transactions recorded for ${year}.</p>`;
+
+  const items = log.slice().sort((a,b) => a.week - b.week).map(tx => {
+    if(tx.type === 'trade'){
+      const sideHtml = tx.sides.map(s => `
+        <div>
+          <strong>${escapeHtml(TEAMS.get(s.ownerKey).name)}</strong> receives:
+          ${s.receives.length ? s.receives.map(a=>escapeHtml(assetLabel(a))).join(', ') : '<span class="muted">nothing</span>'}
+        </div>`).join('');
+      return `<li><div class="shame-sub" style="margin-bottom:4px;">Week ${tx.week} &middot; Trade</div>${sideHtml}</li>`;
+    }
+    const label = tx.type === 'waiver' ? 'Waiver claim' : 'Free agent add';
+    const added = tx.added.map(id => escapeHtml(playerLabel(id))).join(', ') || 'nothing';
+    const dropped = tx.dropped.map(id => escapeHtml(playerLabel(id))).join(', ');
+    return `<li>
+      <div class="shame-sub" style="margin-bottom:4px;">Week ${tx.week} &middot; ${label}</div>
+      <strong>${escapeHtml(TEAMS.get(tx.ownerKey).name)}</strong> added ${added}${dropped ? `, dropped ${dropped}` : ''}${tx.faabSpent ? ` (FAAB: ${tx.faabSpent})` : ''}
+    </li>`;
+  }).join('');
+
+  return `<div class="card" style="margin-top:16px;"><h3 class="card-title">Transaction Log &middot; ${year}</h3><ul class="shame-list">${items}</ul></div>`;
+}
+
+function renderTransactions(){
+  const years = SEASONS.map(s => s.year).sort((a,b) => b-a);
+  const options = `<option value="all">All-Time</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  return `
+    <h2 class="section-title">Transaction Activity</h2>
+    <div class="select-row">
+      <select id="tx-year">${options}</select>
+    </div>
+    <div id="tx-content"></div>
+    <p class="muted" style="margin-top:10px;">Only completed transactions are counted. Select a specific season to see the individual transaction log.</p>
+  `;
+}
+
+// ---- Awards tab: all-time or a specific season ----
+
+function weeklyStdev(ownerKey, year){
+  let entries = GAME_ENTRIES.filter(g => g.teamKey === ownerKey);
+  if(year != null) entries = entries.filter(g => g.season === year);
+  if(entries.length < 2) return 0;
+  const mean = entries.reduce((s,g) => s+g.pf, 0) / entries.length;
+  const variance = entries.reduce((s,g) => s + (g.pf-mean)*(g.pf-mean), 0) / entries.length;
+  return Math.sqrt(variance);
+}
+
+function renderAwardsContent(year){
+  const keys = Array.from(TEAMS.keys()).filter(k => year == null || TEAMS.get(k).seasons.some(s => s.year === year));
+  if(keys.length === 0) return `<p class="muted">No data for ${year}.</p>`;
+
+  const bySrd = keys.map(k => ({ ownerKey:k, val: weeklyStdev(k, year) }));
+  const consistentPool = bySrd.filter(x => x.val > 0);
+  const mostConsistent = (consistentPool.length?consistentPool:bySrd).slice().sort((a,b) => a.val-b.val)[0];
+  const mostVolatile = bySrd.slice().sort((a,b) => b.val-a.val)[0];
+
+  const byBench = keys.map(k => ({ ownerKey:k, val: benchTaxFor(k, year) }));
+  const worstBenchTax = byBench.slice().sort((a,b) => b.val-a.val)[0];
+  const bestLineupSetter = byBench.slice().sort((a,b) => a.val-b.val)[0];
+
+  const byLuck = keys.map(k => {
+    const l = luckFor(k, year);
+    return { ownerKey:k, delta: l.actualWins - l.expectedWins, ...l };
+  });
+  const luckiest = byLuck.slice().sort((a,b) => b.delta-a.delta)[0];
+  const unluckiest = byLuck.slice().sort((a,b) => a.delta-b.delta)[0];
+
+  const byTx = keys.map(k => ({ ownerKey:k, ...txStatsFor(k, year) }));
+  const tradeHawk = byTx.slice().sort((a,b) => b.trades-a.trades)[0];
+  const waiverWizard = byTx.slice().sort((a,b) => b.waiverAdds-a.waiverAdds)[0];
+
+  const card = (name, ownerKey, stat, desc) => `
+    <div class="award-card">
+      <div class="award-name">${name}</div>
+      <div class="award-winner">${teamAvatarHtml(TEAMS.get(ownerKey))}<span class="tname">${escapeHtml(TEAMS.get(ownerKey).name)}</span></div>
+      <div class="award-stat">${stat}</div>
+      <div class="award-desc">${desc}</div>
+    </div>`;
+
+  const scopeWord = year == null ? 'career-wide' : `in ${year}`;
+
+  return `
+    <div class="award-grid">
+      ${card('Mr. Consistent', mostConsistent.ownerKey, `\u03c3 = ${fmt1(mostConsistent.val)} pts/week`, `Smallest week-to-week scoring swings, ${scopeWord}.`)}
+      ${card('Boom or Bust', mostVolatile.ownerKey, `\u03c3 = ${fmt1(mostVolatile.val)} pts/week`, `Biggest week-to-week scoring swings, ${scopeWord}.`)}
+      ${card('Bench Tax', worstBenchTax.ownerKey, `${fmt1(worstBenchTax.val)} pts left on the bench`, `Most points stranded on the bench, ${scopeWord}.`)}
+      ${card('Sharpest Lineup Setter', bestLineupSetter.ownerKey, `${fmt1(bestLineupSetter.val)} pts left on the bench`, `Fewest points stranded on the bench, ${scopeWord}.`)}
+      ${card('Luckiest', luckiest.ownerKey, `${luckiest.delta>=0?'+':''}${fmt1(luckiest.delta)} wins vs. expected`, `${luckiest.actualWins} actual wins vs. ${fmt1(luckiest.expectedWins)} expected, ${scopeWord}.`)}
+      ${card('Unluckiest', unluckiest.ownerKey, `${fmt1(unluckiest.delta)} wins vs. expected`, `${unluckiest.actualWins} actual wins vs. ${fmt1(unluckiest.expectedWins)} expected, ${scopeWord}.`)}
+      ${tradeHawk.trades > 0 ? card('Trade Hawk', tradeHawk.ownerKey, `${tradeHawk.trades} trades`, `Most trades completed, ${scopeWord}.`) : ''}
+      ${waiverWizard.waiverAdds > 0 ? card('Waiver Wire Wizard', waiverWizard.ownerKey, `${waiverWizard.waiverAdds} waiver adds`, `Most successful waiver claims, ${scopeWord}.`) : ''}
+    </div>
+    <p class="muted" style="margin-top:16px;">"Expected wins" compares each week's score against the rest of the league that week &mdash; a team with a top-scoring week "expected" a win regardless of who they were actually paired against.</p>
+  `;
+}
+
+function renderAwards(){
+  const years = SEASONS.map(s => s.year).sort((a,b) => b-a);
+  const options = `<option value="all">All-Time</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  return `
+    <h2 class="section-title">Manager Awards</h2>
+    <div class="select-row">
+      <select id="awards-year">${options}</select>
+    </div>
+    <div id="awards-content"></div>
+  `;
+}
+
+function renderHallOfShame(){
+  const losses = GAME_ENTRIES.filter(g => g.margin < 0).sort((a,b) => b.pf-a.pf).slice(0,5);
+  const backdoorWins = GAME_ENTRIES.filter(g => g.margin > 0).sort((a,b) => a.pf-b.pf).slice(0,5);
+
+  const heartbreakList = losses.map(g => `
+    <li>
+      <div class="shame-headline">${escapeHtml(TEAMS.get(g.teamKey).name)} scored ${fmt1(g.pf)} &mdash; and still lost</div>
+      <div class="shame-sub">Fell to ${escapeHtml(TEAMS.get(g.oppKey).name)}'s ${fmt1(g.pa)} in ${g.season}, week ${g.week}${g.isPlayoff?' (playoffs)':''}</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
+  const backdoorList = backdoorWins.map(g => `
+    <li>
+      <div class="shame-headline">${escapeHtml(TEAMS.get(g.teamKey).name)} won with just ${fmt1(g.pf)} points</div>
+      <div class="shame-sub">Squeaked past ${escapeHtml(TEAMS.get(g.oppKey).name)}'s ${fmt1(g.pa)} in ${g.season}, week ${g.week}${g.isPlayoff?' (playoffs)':''}</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
+  const letdowns = CHAMP_GAMES.filter(c => c.runnerPts > c.champPts);
+  const letdownList = letdowns.map(c => `
+    <li>
+      <div class="shame-headline">${c.year}: ${escapeHtml(TEAMS.get(c.runnerKey).name)} outscored the champion &mdash; and still lost the title</div>
+      <div class="shame-sub">${escapeHtml(TEAMS.get(c.runnerKey).name)} put up ${fmt1(c.runnerPts)} to ${escapeHtml(TEAMS.get(c.champKey).name)}'s ${fmt1(c.champPts)} in the championship, but the ring still went to ${escapeHtml(TEAMS.get(c.champKey).name)}.</div>
+    </li>`).join('') || '<li class="muted">No championship letdowns on record &mdash; every champion has outscored their opponent in the final.</li>';
+
+  const bubbleTeams = [];
+  for(const season of SEASONS){
+    const playoffSet = PLAYOFF_TEAMS.get(season.year);
+    if(!playoffSet || playoffSet.size === 0 || playoffSet.size >= season.standings.length) continue;
+    const ranked = season.standings.slice().sort((a,b) => (b.wins-a.wins) || (b.pf-a.pf));
+    const lastIn = ranked.filter(s => playoffSet.has(s.ownerKey)).pop();
+    const firstOut = ranked.find(s => !playoffSet.has(s.ownerKey));
+    if(lastIn && firstOut){
+      bubbleTeams.push({ year: season.year, lastIn, firstOut, gap: lastIn.wins - firstOut.wins });
+    }
+  }
+  bubbleTeams.sort((a,b) => a.gap - b.gap);
+  const bubbleList = bubbleTeams.slice(0,5).map(b => `
+    <li>
+      <div class="shame-headline">${b.year}: ${escapeHtml(TEAMS.get(b.firstOut.ownerKey).name)} missed the playoffs by a hair</div>
+      <div class="shame-sub">Finished ${b.firstOut.wins}-${b.firstOut.losses} (${fmt1(b.firstOut.pf)} pts) &mdash; ${escapeHtml(TEAMS.get(b.lastIn.ownerKey).name)} snuck in at ${b.lastIn.wins}-${b.lastIn.losses} (${fmt1(b.lastIn.pf)} pts)</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
+  const blunders = BENCH_BLUNDERS.slice(0,5).map(b => `
+    <li>
+      <div class="shame-headline">${escapeHtml(TEAMS.get(b.ownerKey).name)} left ${escapeHtml(playerLabel(b.benchPlayerId))} on the bench</div>
+      <div class="shame-sub">${playerLabel(b.benchPlayerId)} scored ${fmt1(b.benchPts)} on the bench while starting ${escapeHtml(playerLabel(b.starterPlayerId))} (${fmt1(b.starterPts)} pts) &mdash; ${b.year} week ${b.week}, ${fmt1(b.delta)} pts left on the table</div>
+    </li>`).join('') || '<li class="muted">No data yet</li>';
+
+  return `
+    <h2 class="section-title">Hall of Shame</h2>
+    <div class="grid-2">
+      <div class="card"><h3 class="card-title">Heartbreak Losses</h3><ul class="shame-list">${heartbreakList}</ul></div>
+      <div class="card"><h3 class="card-title">Backdoor Wins</h3><ul class="shame-list">${backdoorList}</ul></div>
+      <div class="card"><h3 class="card-title">Championship Letdowns</h3><ul class="shame-list">${letdownList}</ul></div>
+      <div class="card"><h3 class="card-title">Missed the Playoffs by a Hair</h3><ul class="shame-list">${bubbleList}</ul></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Worst Bench Blunders</h3>
+      <ul class="shame-list">${blunders}</ul>
+    </div>
+  `;
+}
+
+const RENDERERS = {
+  overview: renderOverview, seasons: renderSeasons, h2h: renderH2H, records: renderRecords,
+  draft: renderDraft, transactions: renderTransactions, awards: renderAwards, shame: renderHallOfShame,
+  teams: renderTeams
+};
+
+function showTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('content').innerHTML = RENDERERS[tab]();
+  if(tab === 'teams'){
+    document.getElementById('team-grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.team-card');
+      if(!card) return;
+      const slot = document.getElementById('team-detail-slot');
+      const key = card.dataset.owner;
+      if(slot.dataset.open === key){ slot.innerHTML = ''; slot.dataset.open = ''; return; }
+      slot.innerHTML = renderTeamDetail(key);
+      slot.dataset.open = key;
+      slot.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    });
+  }
+  if(tab === 'h2h'){
+    const selA = document.getElementById('rivalry-a');
+    const selB = document.getElementById('rivalry-b');
+    const logEl = document.getElementById('rivalry-log');
+    if(selA && selB){
+      if(selB.options.length > 1) selB.selectedIndex = 1;
+      const update = () => { logEl.innerHTML = renderRivalryLog(selA.value, selB.value); };
+      selA.addEventListener('change', update);
+      selB.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'draft'){
+    const sel = document.getElementById('draft-year');
+    const board = document.getElementById('draft-board');
+    if(sel && board){
+      const update = () => { board.innerHTML = renderDraftBoard(Number(sel.value)); };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'transactions'){
+    const sel = document.getElementById('tx-year');
+    const content = document.getElementById('tx-content');
+    if(sel && content){
+      const update = () => {
+        const year = sel.value === 'all' ? null : Number(sel.value);
+        const { html } = renderTransactionSummary(year);
+        content.innerHTML = html + (year != null ? renderTransactionLog(year) : '');
+      };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'awards'){
+    const sel = document.getElementById('awards-year');
+    const content = document.getElementById('awards-content');
+    if(sel && content){
+      const update = () => { content.innerHTML = renderAwardsContent(sel.value === 'all' ? null : Number(sel.value)); };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if(btn) showTab(btn.dataset.tab);
+});
+
+async function init(){
+  try{
+    const { bundles, playersById } = await loadAll();
+    processSeasons(bundles, playersById);
+    renderMasthead();
+    showTab('overview');
+  } catch(err){
+    console.error(err);
+    document.getElementById('content').innerHTML = `
+      <div class="status-box error">
+        <div>&#9888; Couldn't pull the box scores.</div>
+        <div class="muted" style="margin-top:6px;">${escapeHtml(err.message || 'Unknown error')}</div>
+        <button class="retry-btn" onclick="init()">Try again</button>
+      </div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
