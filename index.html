@@ -561,18 +561,22 @@ function processSeasons(bundles, playersById){
     const thirdGame = winnersBracket.find(g => g.p === 3);
     if(thirdGame && thirdGame.w != null) thirdKey = rosterIdToOwnerKey.get(thirdGame.w) || null;
 
-    // "Toilet Bowl" / last-place, from the losers bracket — mirrors the
-    // winners bracket exactly: the final game's winner is confirmed as the
-    // season's worst team (they "win" the toilet bowl), the loser of that
-    // game finishes second-to-last. This assumes Sleeper's losers_bracket
-    // is structured symmetrically to winners_bracket; if your league's
-    // toilet bowl comes out backwards, swap `.w`/`.l` below.
+    // "Toilet Bowl" / last-place, from the losers bracket. Unlike the
+    // winners bracket (where p:1 is the highest-stakes, best-placement
+    // game), a losers/placement bracket's p:1 game decides the better pair
+    // of finishes among teams who won their way there, while a p:3 "3rd
+    // place" style game — between teams who already lost once — decides
+    // the truly worst placements. So the game that actually determines
+    // dead last is whichever placement game has the *highest* p value on
+    // record that season, and it's that game's LOSER who finishes last
+    // (its winner finishes second-to-last).
     let loserKey = null, secondLoserKey = null;
     const lb = losersBracket || [];
-    const finalLoserGame = lb.find(g => g.p === 1);
-    if(finalLoserGame){
-      if(finalLoserGame.w != null) loserKey = rosterIdToOwnerKey.get(finalLoserGame.w) || null;
-      if(finalLoserGame.l != null) secondLoserKey = rosterIdToOwnerKey.get(finalLoserGame.l) || null;
+    const placementGames = lb.filter(g => g.p != null);
+    if(placementGames.length){
+      const finalLoserGame = placementGames.reduce((m,g) => g.p > m.p ? g : m);
+      if(finalLoserGame.l != null) loserKey = rosterIdToOwnerKey.get(finalLoserGame.l) || null;
+      if(finalLoserGame.w != null) secondLoserKey = rosterIdToOwnerKey.get(finalLoserGame.w) || null;
     }
 
     // Playoff participants: any roster that shows up directly as t1/t2 in the
