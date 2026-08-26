@@ -6,208 +6,181 @@
 <title>League Ledger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* Warm cream page, deep navy for headlines, gold for accents. */
-    --bg-page:#F7F2E6;
-    --bg-page-2:#F1E9D6;
-    --navy:#1B3A5C;
-    --navy-deep:#122A44;
-    --navy-soft:#3D5A78;
-    --gold:#C9972E;
-    --gold-light:#E4B94D;
-    --gold-dim:#A67B22;
-    --green:#3C6B4E;
-    --red:#A6433B;
-    --red-light:#C1615A;
-    --card:#FFFFFF;
-    --card-soft:#FBF7EC;
-    --ink:#25384D;
-    --ink-soft:#657186;
-    --line:#E4DCC5;
-    --line-soft:#EFE8D6;
-    /* Legacy variable names kept as aliases so existing rules cascade cleanly. */
-    --turf:var(--navy);
-    --turf-light:var(--navy-soft);
-    --cream:var(--card);
-    --cream-2:var(--card-soft);
-    --amber:var(--gold);
-    --amber-dim:var(--gold-dim);
-    --oxblood:var(--red);
-    --oxblood-light:var(--red-light);
-    --chalk:var(--card);
+    --bg-stadium:#121C26;
+    --bg-stadium-2:#0D1620;
+    --turf:#2F4E3D;
+    --turf-light:#3C5F4B;
+    --cream:#EFE7D6;
+    --cream-2:#E7DCC5;
+    --amber:#E8A33D;
+    --amber-dim:#C68A2E;
+    --oxblood:#8C3331;
+    --oxblood-light:#B04B44;
+    --chalk:#F7F4EC;
+    --ink:#1B2A3D;
+    --ink-soft:#4A5568;
+    --line:#C9BC9C;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
     background:
-      radial-gradient(ellipse 1100px 480px at 50% -8%, rgba(201,151,46,0.07), transparent 60%),
-      linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page-2) 100%);
-    color:var(--ink);
-    font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(232,163,61,0.08), transparent 60%),
+      linear-gradient(180deg, var(--bg-stadium) 0%, var(--bg-stadium-2) 100%);
+    color:var(--chalk);
+    font-family:'IBM Plex Serif', serif;
     min-height:100vh;
   }
-  .wrap{max-width:1220px;margin:0 auto;padding:24px clamp(20px, 4vw, 64px) 80px;}
+  .wrap{max-width:none;margin:0 auto;padding:28px clamp(20px, 5vw, 140px) 80px;}
 
   /* ---------- Masthead ---------- */
   .masthead{
-    display:flex;align-items:center;gap:16px;
-    background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:16px 22px;box-shadow:0 2px 12px rgba(27,58,92,0.06);
+    display:flex;align-items:center;gap:18px;
+    padding-bottom:22px;margin-bottom:6px;
+    border-bottom:3px double var(--line);
   }
   .masthead img.league-avatar{
-    width:50px;height:50px;border-radius:10px;object-fit:cover;
-    border:2px solid var(--gold);flex-shrink:0;
+    width:56px;height:56px;border-radius:6px;object-fit:cover;
+    border:2px solid var(--amber);flex-shrink:0;
   }
   .masthead-text .eyebrow{
     font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--gold-dim); margin:0 0 4px;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--amber); margin:0 0 4px;
   }
   .masthead-text h1{
     font-family:'Big Shoulders Display',sans-serif;
-    font-weight:800;font-size:clamp(22px,3.6vw,32px);
-    letter-spacing:.01em;margin:0;line-height:1;color:var(--navy);
+    font-weight:800;font-size:clamp(28px,5vw,44px);
+    letter-spacing:.01em;margin:0;line-height:1;color:var(--chalk);
     text-transform:uppercase;
   }
   .masthead-text .sub{
-    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:4px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9FB0A6;margin-top:5px;
   }
 
-  /* ---------- Primary tabs ---------- */
+  /* ---------- Tabs ---------- */
   .tabs{
-    display:flex;gap:2px;margin:18px 0 4px;flex-wrap:wrap;
-    border-bottom:2px solid var(--line);
+    display:flex;gap:2px;margin:22px 0 26px;flex-wrap:wrap;
+    border-bottom:1px solid rgba(255,255,255,0.08);
   }
   .tab-btn{
     font-family:'IBM Plex Mono',monospace;
-    font-size:12px;letter-spacing:.07em;text-transform:uppercase;
-    background:transparent;border:none;color:var(--ink-soft);
-    padding:12px 16px;cursor:pointer;position:relative;
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    background:transparent;border:none;color:#8B9AA5;
+    padding:11px 16px;cursor:pointer;position:relative;
+    border-top-left-radius:4px;border-top-right-radius:4px;
     transition:color .15s;
   }
-  .tab-btn:hover{color:var(--navy);}
-  .tab-btn.active{color:var(--navy);font-weight:600;}
+  .tab-btn:hover{color:var(--chalk);}
+  .tab-btn.active{color:var(--amber);background:rgba(232,163,61,0.08);}
   .tab-btn.active::after{
-    content:'';position:absolute;left:10px;right:10px;bottom:-2px;height:3px;background:var(--gold);border-radius:2px;
+    content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--amber);
   }
-
-  /* ---------- Sub tabs ---------- */
-  .subtabs{display:flex;gap:8px;margin:18px 0 20px;flex-wrap:wrap;}
-  .subtab-btn{
-    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
-    background:var(--card);border:1px solid var(--line);color:var(--ink-soft);
-    padding:7px 14px;border-radius:20px;cursor:pointer;transition:all .15s;
-  }
-  .subtab-btn:hover{border-color:var(--gold);color:var(--navy);}
-  .subtab-btn.active{background:var(--navy);border-color:var(--navy);color:#fff;}
 
   /* ---------- Ledger page/card ---------- */
-  .page{background:transparent;color:var(--ink);position:relative;}
-  .page::before{display:none;}
-  .page-inner{position:relative;padding:22px 0 0;}
+  .page{
+    background:var(--cream);
+    color:var(--ink);
+    border-radius:3px;
+    box-shadow:0 18px 40px rgba(0,0,0,0.35);
+    position:relative;
+  }
+  .page::before{
+    content:'';position:absolute;inset:0;
+    background-image:repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(27,42,61,0.05) 28px);
+    pointer-events:none;border-radius:3px;
+  }
+  .page-inner{position:relative;padding:26px 26px 30px;}
   .card{
-    background:var(--card);color:var(--ink);border-radius:10px;
-    box-shadow:0 2px 10px rgba(27,58,92,0.06);border:1px solid var(--line);
-    padding:20px 22px;margin-bottom:18px;
+    background:var(--cream);color:var(--ink);border-radius:3px;
+    box-shadow:0 10px 24px rgba(0,0,0,0.28);padding:20px 22px;margin-bottom:18px;
   }
   h2.section-title{
     font-family:'Big Shoulders Display',sans-serif;font-weight:800;
-    font-size:19px;text-transform:uppercase;letter-spacing:.02em;
-    margin:0 0 16px;color:var(--navy);
-    display:flex;align-items:center;gap:10px;
-    padding-bottom:10px;border-bottom:2px solid var(--line);
-  }
-  h2.section-title::before{
-    content:'';width:8px;height:8px;background:var(--gold);border-radius:2px;flex-shrink:0;
+    font-size:22px;text-transform:uppercase;letter-spacing:.02em;
+    margin:0 0 14px;color:var(--ink);
+    border-bottom:2px solid var(--turf);padding-bottom:8px;
   }
   h3.card-title{
     font-family:'Big Shoulders Display',sans-serif;font-weight:700;
-    font-size:15px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 12px;color:var(--navy);
+    font-size:17px;text-transform:uppercase;letter-spacing:.02em;margin:0 0 12px;color:var(--ink);
   }
   .muted{color:var(--ink-soft);font-size:13px;}
 
   /* ---------- Tables ---------- */
   table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
-  table.narrative{font-family:'Inter',sans-serif;font-size:14px;}
+  table.narrative{font-family:'IBM Plex Serif',serif;font-size:14px;}
   th{
     text-align:left;font-weight:600;color:var(--ink-soft);
-    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-    padding:9px 10px;border-bottom:2px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:6px 8px;border-bottom:1px solid var(--line);
   }
-  td{padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle;color:var(--ink);}
+  td{padding:7px 8px;border-bottom:1px solid rgba(201,188,156,0.5);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
-  tbody tr:hover td{background:rgba(201,151,46,0.05);}
   td.num,th.num{text-align:right;}
   .team-cell{display:flex;align-items:center;gap:8px;}
   .avatar{
-    width:26px;height:26px;border-radius:6px;object-fit:cover;background:var(--navy);flex-shrink:0;
-    border:1px solid var(--line);
+    width:26px;height:26px;border-radius:4px;object-fit:cover;background:var(--turf);flex-shrink:0;
+    border:1px solid rgba(27,42,61,0.15);
   }
   .avatar.sm{width:20px;height:20px;}
   .avatar-fallback{
-    width:26px;height:26px;border-radius:6px;background:var(--navy);color:#fff;
+    width:26px;height:26px;border-radius:4px;background:var(--turf);color:var(--chalk);
     display:flex;align-items:center;justify-content:center;font-family:'Big Shoulders Display',sans-serif;
     font-weight:700;font-size:11px;flex-shrink:0;
   }
   .rank-badge{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:23px;height:23px;border-radius:50%;background:var(--card-soft);border:1.5px solid var(--gold);
-    font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:11.5px;color:var(--navy);
+    display:inline-block;width:20px;text-align:center;font-family:'Big Shoulders Display',sans-serif;
+    font-weight:700;color:var(--amber-dim);
   }
 
   /* ---------- Trophy case ---------- */
-  .trophy-strip{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 10px;}
+  .trophy-strip{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;}
   .trophy-plate{
-    min-width:170px;background:var(--card);color:var(--ink);border-radius:10px;
-    border:1px solid var(--line);position:relative;flex-shrink:0;overflow:hidden;
-    box-shadow:0 2px 10px rgba(27,58,92,0.06);
+    min-width:150px;background:var(--turf);color:var(--chalk);border-radius:4px;padding:12px 14px;
+    border:1px solid rgba(0,0,0,0.2);position:relative;flex-shrink:0;
   }
-  .trophy-plate .plate-head{
-    background:var(--navy);color:#fff;padding:8px 14px;
-    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  .trophy-plate .year{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--amber);
+    text-transform:uppercase;
   }
-  .trophy-plate.alt .plate-head{background:var(--green);}
-  .trophy-plate.shame-plate .plate-head{background:var(--red);}
-  .trophy-plate .plate-body{padding:16px 14px;text-align:center;}
-  .trophy-icon-wrap{color:var(--gold);margin-bottom:8px;display:flex;justify-content:center;}
-  .trophy-plate.shame-plate .trophy-icon-wrap{color:var(--red-light);}
   .trophy-plate .champ{
-    font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;line-height:1.2;color:var(--navy);
+    font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;margin-top:4px;line-height:1.15;
   }
-  .trophy-plate .role-label{
-    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--ink-soft);margin-top:4px;
-  }
-  .trophy-plate .note{font-size:10.5px;color:var(--ink-soft);margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+  .trophy-plate .note{font-size:10.5px;color:#C9D6CC;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+  .trophy-plate.shame-plate{background:var(--oxblood);}
+  .trophy-plate.shame-plate .year{color:#F0B8B0;}
+  .trophy-plate.shame-plate .note{color:#EBD2CE;}
 
   /* ---------- Head to head grid ---------- */
   .h2h-scroll{overflow-x:auto;}
   table.h2h{font-size:11px;}
-  table.h2h th, table.h2h td{padding:6px 7px;text-align:center;white-space:nowrap;}
-  table.h2h th.rowlabel, table.h2h td.rowlabel{text-align:left;position:sticky;left:0;background:var(--card);}
+  table.h2h th, table.h2h td{padding:5px 6px;text-align:center;white-space:nowrap;}
+  table.h2h th.rowlabel, table.h2h td.rowlabel{text-align:left;position:sticky;left:0;background:var(--cream);}
   .stamp{
-    display:inline-block;min-width:52px;padding:3px 4px;border-radius:5px;font-family:'IBM Plex Mono',monospace;
+    display:inline-block;min-width:52px;padding:3px 4px;border-radius:3px;font-family:'IBM Plex Mono',monospace;
     font-weight:600;letter-spacing:.02em;
   }
-  .stamp.win-heavy{background:rgba(60,107,78,0.14);color:#2A4E38;}
-  .stamp.loss-heavy{background:rgba(166,67,59,0.12);color:#7C332D;}
-  .stamp.even{background:rgba(101,113,134,0.12);color:var(--ink-soft);}
-  .stamp.blank{color:#C4B98F;}
-  .diag{background:repeating-linear-gradient(45deg, rgba(27,58,92,0.05) 0 4px, transparent 4px 8px);}
+  .stamp.win-heavy{background:rgba(47,78,61,0.18);color:#254536;}
+  .stamp.loss-heavy{background:rgba(140,51,49,0.16);color:#7A2C2A;}
+  .stamp.even{background:rgba(74,85,104,0.1);color:var(--ink-soft);}
+  .stamp.blank{color:#B7AC90;}
+  .diag{background:repeating-linear-gradient(45deg, rgba(27,42,61,0.06) 0 4px, transparent 4px 8px);}
 
   /* ---------- Records ---------- */
   .record-list{list-style:none;margin:0;padding:0;}
   .record-list li{
     display:flex;justify-content:space-between;align-items:center;gap:10px;
-    padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px;
+    padding:8px 0;border-bottom:1px solid rgba(201,188,156,0.5);font-size:13.5px;
   }
   .record-list li:last-child{border-bottom:none;}
   .record-list .who{display:flex;align-items:center;gap:8px;}
-  .record-list .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--navy);}
+  .record-list .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--turf);}
   .record-hero{
-    font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:15px;color:var(--navy);
+    font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:15px;color:var(--ink);
   }
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
   @media (max-width:700px){.grid-2{grid-template-columns:1fr;}}
@@ -217,67 +190,66 @@
   .season-card .season-head{
     display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;
   }
-  .season-head .yr{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:24px;color:var(--navy);}
-  .season-head .champ-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold-dim);}
+  .season-head .yr{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;color:var(--ink);}
+  .season-head .champ-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--turf);}
 
   /* ---------- Team cards ---------- */
   .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
   .team-card{
-    background:var(--card);border-radius:10px;padding:14px;cursor:pointer;
-    border:1px solid var(--line);transition:transform .1s, box-shadow .1s;
-    box-shadow:0 2px 8px rgba(27,58,92,0.05);
+    background:var(--cream-2);border-radius:4px;padding:14px;cursor:pointer;
+    border:1px solid rgba(27,42,61,0.08);transition:transform .1s, box-shadow .1s;
   }
-  .team-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(27,58,92,0.12);}
+  .team-card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.15);}
   .team-card .thead{display:flex;align-items:center;gap:10px;}
-  .team-card .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;line-height:1.15;color:var(--navy);}
+  .team-card .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;line-height:1.15;}
   .team-card .trecord{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .team-card .rings{font-size:13px;margin-top:8px;color:var(--gold-dim);}
+  .team-card .rings{font-size:13px;margin-top:8px;color:var(--amber-dim);}
   .team-detail{grid-column:1/-1;}
 
   /* ---------- Loading / error ---------- */
   .status-box{
-    padding:60px 20px;text-align:center;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);
+    padding:60px 20px;text-align:center;font-family:'IBM Plex Mono',monospace;color:#9FB0A6;
   }
   .status-box .spinner{
-    width:26px;height:26px;border:3px solid rgba(201,151,46,0.25);border-top-color:var(--gold);
+    width:26px;height:26px;border:3px solid rgba(232,163,61,0.25);border-top-color:var(--amber);
     border-radius:50%;margin:0 auto 16px;animation:spin 0.9s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
-  .status-box.error{color:var(--red);}
+  .status-box.error{color:var(--oxblood-light);}
   .retry-btn{
-    margin-top:14px;font-family:'IBM Plex Mono',monospace;background:var(--gold);color:#2A1D02;
-    border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-size:12px;letter-spacing:.05em;
+    margin-top:14px;font-family:'IBM Plex Mono',monospace;background:var(--amber);color:#231405;
+    border:none;padding:9px 18px;border-radius:3px;cursor:pointer;font-size:12px;letter-spacing:.05em;
   }
-  footer.credit{text-align:center;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:10.5px;margin-top:28px;}
+  footer.credit{text-align:center;color:#6E7E76;font-family:'IBM Plex Mono',monospace;font-size:10.5px;margin-top:28px;}
 
   /* ---------- Awards / shame cards ---------- */
   .award-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
-  .award-card{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(27,58,92,0.05);}
+  .award-card{background:var(--cream-2);border-radius:4px;padding:16px;border:1px solid rgba(27,42,61,0.08);}
   .award-card .award-name{
-    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-dim);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-dim);
   }
   .award-card .award-winner{display:flex;align-items:center;gap:8px;margin-top:8px;}
-  .award-card .award-winner .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;color:var(--navy);}
+  .award-card .award-winner .tname{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:16px;}
   .award-card .award-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:6px;}
   .award-card .award-desc{font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.4;}
 
   .shame-list{list-style:none;margin:0;padding:0;}
   .shame-list li{
-    padding:12px 0;border-bottom:1px solid var(--line-soft);
+    padding:12px 0;border-bottom:1px solid rgba(201,188,156,0.5);
   }
   .shame-list li:last-child{border-bottom:none;}
-  .shame-headline{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;color:var(--red);}
+  .shame-headline{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:15px;color:var(--oxblood);}
   .shame-sub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
 
   .keeper-badge{
     display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;
-    background:var(--gold);color:#2A1D02;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle;
+    background:var(--amber);color:#231405;border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle;
   }
 
   .select-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
   .select-row select{
-    font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--card);color:var(--ink);
-    border:1px solid var(--line);border-radius:6px;padding:8px 10px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--chalk);color:var(--ink);
+    border:1px solid var(--line);border-radius:3px;padding:7px 9px;
   }
   .select-row .vs{font-family:'Big Shoulders Display',sans-serif;font-weight:700;color:var(--ink-soft);}
 
@@ -287,33 +259,33 @@
   }
   .pill{
     display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;
-    background:rgba(60,107,78,0.12);color:#2A4E38;
+    background:rgba(47,78,61,0.14);color:#254536;
   }
-  .pill.bad{background:rgba(166,67,59,0.12);color:#7C332D;}
+  .pill.bad{background:rgba(140,51,49,0.14);color:#7A2C2A;}
 
   /* ---------- Career profile: stat cards ---------- */
   .profile-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
-  .profile-header .avatar-xl{width:64px;height:64px;border-radius:10px;object-fit:cover;border:2px solid var(--gold);}
+  .profile-header .avatar-xl{width:64px;height:64px;border-radius:8px;object-fit:cover;border:2px solid var(--turf);}
   .profile-header .avatar-xl-fallback{
-    width:64px;height:64px;border-radius:10px;background:var(--navy);color:#fff;
+    width:64px;height:64px;border-radius:8px;background:var(--turf);color:var(--chalk);
     display:flex;align-items:center;justify-content:center;font-family:'Big Shoulders Display',sans-serif;
     font-weight:700;font-size:26px;
   }
-  .profile-header .pname{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;color:var(--navy);}
+  .profile-header .pname{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;color:var(--ink);}
   .profile-header .psub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
-  .profile-header .psub .champ-badge{color:var(--gold-dim);font-weight:600;}
+  .profile-header .psub .champ-badge{color:var(--amber-dim);font-weight:600;}
   .profile-controls{margin-left:auto;display:flex;align-items:center;gap:10px;}
 
   .stat-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
-  .stat-card{background:var(--card-soft);border-radius:8px;padding:13px 14px;border:1px solid var(--line);}
+  .stat-card{background:var(--cream-2);border-radius:5px;padding:13px 14px;border:1px solid rgba(27,42,61,0.08);}
   .stat-card .sc-label{
     font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
     color:var(--ink-soft);
   }
-  .stat-card .sc-value{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:25px;color:var(--navy);margin-top:4px;line-height:1;}
+  .stat-card .sc-value{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:26px;color:var(--ink);margin-top:4px;line-height:1;}
   .stat-card .sc-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-top:4px;}
-  .sc-bar{height:5px;border-radius:3px;background:rgba(27,58,92,0.1);margin-top:8px;overflow:hidden;}
-  .sc-bar-fill{height:100%;background:var(--gold);border-radius:3px;}
+  .sc-bar{height:5px;border-radius:3px;background:rgba(27,42,61,0.1);margin-top:8px;overflow:hidden;}
+  .sc-bar-fill{height:100%;background:var(--amber);border-radius:3px;}
 
   /* ---------- Trend chart ---------- */
   .trend-chart-wrap{overflow-x:auto;}
@@ -323,23 +295,23 @@
   /* ---------- Head-to-head summary cards ---------- */
   .h2h-summary-list{list-style:none;margin:0;padding:0;}
   .h2h-summary-list li{
-    display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(201,188,156,0.5);
     cursor:pointer;
   }
   .h2h-summary-list li:last-child{border-bottom:none;}
-  .h2h-summary-list li:hover{background:rgba(201,151,46,0.05);}
-  .h2h-summary-list .hs-name{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:14px;color:var(--navy);}
+  .h2h-summary-list li:hover{background:rgba(47,78,61,0.05);}
+  .h2h-summary-list .hs-name{font-family:'Big Shoulders Display',sans-serif;font-weight:700;font-size:14px;}
   .h2h-summary-list .hs-record-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
   .h2h-summary-list .hs-right{margin-left:auto;text-align:right;}
   .h2h-summary-list .hs-margin{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:3px;}
 
   /* ---------- Milestone strip ---------- */
   .milestone-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
-  .milestone-card{background:var(--card-soft);border-radius:8px;padding:12px 14px;border:1px solid var(--line);}
+  .milestone-card{background:var(--cream-2);border-radius:5px;padding:12px 14px;border:1px solid rgba(27,42,61,0.08);}
   .milestone-card .mc-label{
-    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-dim);
+    font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-dim);
   }
-  .milestone-card .mc-value{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:19px;color:var(--navy);margin-top:4px;}
+  .milestone-card .mc-value{font-family:'Big Shoulders Display',sans-serif;font-weight:800;font-size:19px;color:var(--ink);margin-top:4px;}
   .milestone-card .mc-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:3px;}
 
   /* ---------- Draft board grid ---------- */
@@ -347,14 +319,14 @@
   table.draft-board th{text-align:center;white-space:nowrap;}
   table.draft-board .round-label{
     font-family:'Big Shoulders Display',sans-serif;font-weight:700;color:var(--ink-soft);
-    background:var(--card-soft);white-space:nowrap;
+    background:var(--cream-2);white-space:nowrap;
   }
   td.draft-cell{
-    min-width:110px;vertical-align:top;padding:6px 8px;border:1px solid var(--line-soft);
-    background:var(--card);
+    min-width:110px;vertical-align:top;padding:6px 8px;border:1px solid rgba(201,188,156,0.4);
+    background:var(--chalk);
   }
-  td.draft-cell.empty{color:#C9BE96;text-align:center;background:transparent;}
-  .draft-pick-player{font-weight:600;font-size:11.5px;line-height:1.25;color:var(--ink);}
+  td.draft-cell.empty{color:#B7AC90;text-align:center;background:transparent;}
+  .draft-pick-player{font-weight:600;font-size:11.5px;line-height:1.25;}
   .draft-pick-pts{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:2px;}
 </style>
 </head>
@@ -369,13 +341,17 @@
   </header>
 
   <nav class="tabs" id="tabs" style="display:none;">
-    <button class="tab-btn active" data-group="overview">Overview</button>
-    <button class="tab-btn" data-group="standings">Standings</button>
-    <button class="tab-btn" data-group="teams">Teams</button>
-    <button class="tab-btn" data-group="draftmoves">Draft &amp; Moves</button>
-    <button class="tab-btn" data-group="records">Records</button>
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="seasons">Seasons</button>
+    <button class="tab-btn" data-tab="h2h">Head&#8209;to&#8209;Head</button>
+    <button class="tab-btn" data-tab="records">Records</button>
+    <button class="tab-btn" data-tab="trends">Trends</button>
+    <button class="tab-btn" data-tab="draft">Draft</button>
+    <button class="tab-btn" data-tab="transactions">Transactions</button>
+    <button class="tab-btn" data-tab="awards">Awards</button>
+    <button class="tab-btn" data-tab="shame">Hall of Shame</button>
+    <button class="tab-btn" data-tab="teams">Teams</button>
   </nav>
-  <div id="subtabs-container"></div>
 
   <div class="page"><div class="page-inner" id="content">
     <div class="status-box">
@@ -1156,23 +1132,17 @@ function allTimeStandingsRows(){
     .sort((a,b) => (b.winPct - a.winPct) || (b.championships - a.championships) || (b.pf - a.pf));
 }
 
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="34" height="34" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.17A5 5 0 0 1 13 15.9V18h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.1A5 5 0 0 1 8.17 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 2 2.83A6.9 6.9 0 0 1 7 8.5V7zm10 0v1.5a6.9 6.9 0 0 1-.03 1.33A2 2 0 0 0 19 8V7h-2z"/></svg>`;
-
 function renderOverview(){
   const rows = allTimeStandingsRows();
   const hasToiletBowl = SEASONS.some(s => s.loserKey);
 
-  const trophies = SEASONS.slice().reverse().map((s,i) => {
+  const trophies = SEASONS.slice().reverse().map(s => {
     const champ = s.championKey ? TEAMS.get(s.championKey) : null;
     const runner = s.runnerUpKey ? TEAMS.get(s.runnerUpKey) : null;
-    return `<div class="trophy-plate${i%2?' alt':''}">
-      <div class="plate-head">${s.year}</div>
-      <div class="plate-body">
-        <div class="trophy-icon-wrap">${TROPHY_ICON_SVG}</div>
-        <div class="champ">${champ ? escapeHtml(champ.name) : 'Unreported'}</div>
-        <div class="role-label">Champion</div>
-        <div class="note">${runner ? 'def. ' + escapeHtml(runner.name) : '&nbsp;'}</div>
-      </div>
+    return `<div class="trophy-plate">
+      <div class="year">${s.year}</div>
+      <div class="champ">${champ ? escapeHtml(champ.name) : 'Unreported'}</div>
+      <div class="note">${runner ? 'def. ' + escapeHtml(runner.name) : '&nbsp;'}</div>
     </div>`;
   }).join('');
 
@@ -1180,13 +1150,9 @@ function renderOverview(){
     const loser = s.loserKey ? TEAMS.get(s.loserKey) : null;
     const secondLoser = s.secondLoserKey ? TEAMS.get(s.secondLoserKey) : null;
     return `<div class="trophy-plate shame-plate">
-      <div class="plate-head">${s.year}</div>
-      <div class="plate-body">
-        <div class="trophy-icon-wrap">${TROPHY_ICON_SVG}</div>
-        <div class="champ">${loser ? escapeHtml(loser.name) : 'Unreported'}</div>
-        <div class="role-label">Toilet Bowl</div>
-        <div class="note">${secondLoser ? 'def. ' + escapeHtml(secondLoser.name) : '&nbsp;'}</div>
-      </div>
+      <div class="year">${s.year}</div>
+      <div class="champ">${loser ? escapeHtml(loser.name) : 'Unreported'}</div>
+      <div class="note">${secondLoser ? 'def. ' + escapeHtml(secondLoser.name) : '&nbsp;'}</div>
     </div>`;
   }).join('') : '';
 
@@ -1282,62 +1248,49 @@ function renderMilestonesTimeline(){
   return blocks;
 }
 
-function renderSingleSeasonCard(year){
-  const season = SEASONS.find(s => s.year === year);
-  if(!season) return `<p class="muted">No data for ${year}.</p>`;
-  const sorted = season.standings.slice().sort((a,b) => (b.wins-a.wins) || (b.pf-a.pf));
-  const champ = season.championKey ? TEAMS.get(season.championKey) : null;
-  const rows = sorted.map((s,i) => `
-    <tr>
-      <td class="num"><span class="rank-badge">${i+1}</span></td>
-      <td>${teamLabel(s.ownerKey,'sm')}</td>
-      <td class="num">${s.wins}-${s.losses}${s.ties?('-'+s.ties):''}</td>
-      <td class="num">${fmt1(s.pf)}</td>
-      <td class="num">${fmt1(s.pa)}</td>
-    </tr>`).join('');
+function renderSeasons(){
+  const cards = SEASONS.slice().reverse().map(season => {
+    const sorted = season.standings.slice().sort((a,b) => (b.wins-a.wins) || (b.pf-a.pf));
+    const champ = season.championKey ? TEAMS.get(season.championKey) : null;
+    const rows = sorted.map((s,i) => `
+      <tr>
+        <td class="num"><span class="rank-badge">${i+1}</span></td>
+        <td>${teamLabel(s.ownerKey,'sm')}</td>
+        <td class="num">${s.wins}-${s.losses}${s.ties?('-'+s.ties):''}</td>
+        <td class="num">${fmt1(s.pf)}</td>
+        <td class="num">${fmt1(s.pa)}</td>
+      </tr>`).join('');
 
-  const powerWeeks = POWER_RANKINGS.get(season.year) || [];
-  const finalPower = powerWeeks.length ? powerWeeks[powerWeeks.length-1] : null;
-  const powerBlock = finalPower ? `
-    <div class="subhead">Power Rankings &middot; through week ${finalPower.week}</div>
-    <div style="overflow-x:auto;">
-    <table>
-      <thead><tr><th class="num">#</th><th>Team</th><th class="num">Power Score</th></tr></thead>
-      <tbody>${finalPower.ranked.map(r => `
-        <tr><td class="num"><span class="rank-badge">${r.rank}</span></td><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${fmt1(r.score)}</td></tr>`).join('')}</tbody>
-    </table>
-    </div>
-    <p class="muted" style="margin-top:6px;">Power score blends record (2 pts/win, 1/tie) with points scored relative to league average &mdash; it can rank teams differently than raw standings.</p>
-  ` : '';
-
-  return `
-    <div class="card season-card">
-      <div class="season-head">
-        <div class="yr">${season.year}</div>
-        <div class="champ-line">${champ ? '\uD83C\uDFC6 ' + escapeHtml(champ.name) + ' &mdash; League Champion' : 'Champion not recorded'}</div>
-      </div>
+    const powerWeeks = POWER_RANKINGS.get(season.year) || [];
+    const finalPower = powerWeeks.length ? powerWeeks[powerWeeks.length-1] : null;
+    const powerBlock = finalPower ? `
+      <div class="subhead">Power Rankings &middot; through week ${finalPower.week}</div>
       <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
-        <tbody>${rows}</tbody>
+        <thead><tr><th class="num">#</th><th>Team</th><th class="num">Power Score</th></tr></thead>
+        <tbody>${finalPower.ranked.map(r => `
+          <tr><td class="num"><span class="rank-badge">${r.rank}</span></td><td>${teamLabel(r.ownerKey,'sm')}</td><td class="num">${fmt1(r.score)}</td></tr>`).join('')}</tbody>
       </table>
       </div>
-      ${powerBlock}
-    </div>`;
-}
+      <p class="muted" style="margin-top:6px;">Power score blends record (2 pts/win, 1/tie) with points scored relative to league average &mdash; it can rank teams differently than raw standings.</p>
+    ` : '';
 
-function renderSeasonTab(){
-  const years = SEASONS.map(s => s.year).sort((a,b) => b-a);
-  if(years.length === 0) return `<h2 class="section-title">Season by Season</h2><p class="muted">No season data yet.</p>`;
-  const options = years.map(y => `<option value="${y}">${y}</option>`).join('');
-  return `
-    <h2 class="section-title">Season by Season</h2>
-    <div class="select-row">
-      <select id="season-picker">${options}</select>
-    </div>
-    <div id="season-content"></div>
-    ${renderScheduleSimulatorShell()}
-  `;
+    return `
+      <div class="card season-card">
+        <div class="season-head">
+          <div class="yr">${season.year}</div>
+          <div class="champ-line">${champ ? '\uD83C\uDFC6 ' + escapeHtml(champ.name) + ' &mdash; League Champion' : 'Champion not recorded'}</div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Record</th><th class="num">PF</th><th class="num">PA</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        </div>
+        ${powerBlock}
+      </div>`;
+  }).join('');
+  return `<h2 class="section-title">Season by Season</h2>${cards}${renderScheduleSimulatorShell()}`;
 }
 
 // ---- Section 7: Schedule Simulator ----
@@ -2712,203 +2665,123 @@ function renderHallOfShame(){
   `;
 }
 
-// ---- Navigation: 5 top-level groups, several with sub-tabs ----
-
-const GROUPS = {
-  overview:   { label: 'Overview', subtabs: null },
-  standings:  { label: 'Standings', subtabs: [
-    { id: 'season', label: 'Season by Season' },
-    { id: 'trends', label: 'Trends' },
-  ]},
-  teams:      { label: 'Teams', subtabs: [
-    { id: 'teams', label: 'Franchises' },
-    { id: 'h2h', label: 'Head-to-Head' },
-  ]},
-  draftmoves: { label: 'Draft & Moves', subtabs: [
-    { id: 'draft', label: 'Draft' },
-    { id: 'transactions', label: 'Transactions' },
-  ]},
-  records:    { label: 'Records', subtabs: [
-    { id: 'recordbook', label: 'Record Book' },
-    { id: 'awards', label: 'Awards' },
-    { id: 'shame', label: 'Hall of Shame' },
-  ]},
-};
-
-const CONTENT_RENDERERS = {
-  overview: renderOverview,
-  season: renderSeasonTab,
+const RENDERERS = {
+  overview: renderOverview, seasons: renderSeasons, h2h: renderH2H, records: renderRecords,
   trends: renderTrends,
-  teams: renderTeams,
-  h2h: renderH2H,
-  draft: renderDraft,
-  transactions: renderTransactions,
-  recordbook: renderRecords,
-  awards: renderAwards,
-  shame: renderHallOfShame,
+  draft: renderDraft, transactions: renderTransactions, awards: renderAwards, shame: renderHallOfShame,
+  teams: renderTeams
 };
 
-function wireSeasonTab(){
-  const picker = document.getElementById('season-picker');
-  const seasonContent = document.getElementById('season-content');
-  if(picker && seasonContent){
-    const update = () => { seasonContent.innerHTML = renderSingleSeasonCard(Number(picker.value)); };
-    picker.addEventListener('change', update);
-    update();
-  }
-  const yearSel = document.getElementById('sim-year');
-  const aSel = document.getElementById('sim-teamA');
-  const bSel = document.getElementById('sim-teamB');
-  const result = document.getElementById('sim-result');
-  if(yearSel && aSel && bSel && result){
-    if(bSel.options.length > 1) bSel.selectedIndex = 1;
-    const update = () => { result.innerHTML = renderScheduleSimResult(Number(yearSel.value), aSel.value, bSel.value); };
-    yearSel.addEventListener('change', update);
-    aSel.addEventListener('change', update);
-    bSel.addEventListener('change', update);
-    update();
-  }
-}
-
-function wireTeamsTab(){
-  const grid = document.getElementById('team-grid');
-  if(!grid) return;
-  grid.addEventListener('click', (e) => {
-    const card = e.target.closest('.team-card');
-    if(!card) return;
-    const slot = document.getElementById('team-detail-slot');
-    const key = card.dataset.owner;
-    if(slot.dataset.open === key){ slot.innerHTML = ''; slot.dataset.open = ''; return; }
-    slot.innerHTML = renderTeamDetail(key);
-    slot.dataset.open = key;
-
-    const yearSel = document.getElementById('team-detail-year');
-    const statCards = document.getElementById('team-stat-cards');
-    if(yearSel && statCards){
-      yearSel.addEventListener('change', () => {
-        statCards.innerHTML = renderTeamStatCards(key, yearSel.value === 'all' ? null : Number(yearSel.value));
-      });
+function showTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('content').innerHTML = RENDERERS[tab]();
+  if(tab === 'seasons'){
+    const yearSel = document.getElementById('sim-year');
+    const aSel = document.getElementById('sim-teamA');
+    const bSel = document.getElementById('sim-teamB');
+    const result = document.getElementById('sim-result');
+    if(yearSel && aSel && bSel && result){
+      if(bSel.options.length > 1) bSel.selectedIndex = 1;
+      const update = () => { result.innerHTML = renderScheduleSimResult(Number(yearSel.value), aSel.value, bSel.value); };
+      yearSel.addEventListener('change', update);
+      aSel.addEventListener('change', update);
+      bSel.addEventListener('change', update);
+      update();
     }
-    const rivalList = document.getElementById('h2h-summary-list');
-    if(rivalList){
-      rivalList.addEventListener('click', (ev) => {
-        const li = ev.target.closest('li');
-        if(!li) return;
-        PENDING_RIVALRY = { a: key, b: li.dataset.rival };
-        navigateTo('teams', 'h2h');
-      });
-    }
-    slot.scrollIntoView({ behavior:'smooth', block:'nearest' });
-  });
-}
-
-function wireH2HTab(){
-  const selA = document.getElementById('rivalry-a');
-  const selB = document.getElementById('rivalry-b');
-  const logEl = document.getElementById('rivalry-log');
-  if(selA && selB){
-    if(PENDING_RIVALRY){
-      selA.value = PENDING_RIVALRY.a;
-      selB.value = PENDING_RIVALRY.b;
-      PENDING_RIVALRY = null;
-    } else if(selB.options.length > 1){
-      selB.selectedIndex = 1;
-    }
-    const update = () => { logEl.innerHTML = renderRivalryLog(selA.value, selB.value); };
-    selA.addEventListener('change', update);
-    selB.addEventListener('change', update);
-    update();
   }
-}
+  if(tab === 'teams'){
+    document.getElementById('team-grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.team-card');
+      if(!card) return;
+      const slot = document.getElementById('team-detail-slot');
+      const key = card.dataset.owner;
+      if(slot.dataset.open === key){ slot.innerHTML = ''; slot.dataset.open = ''; return; }
+      slot.innerHTML = renderTeamDetail(key);
+      slot.dataset.open = key;
 
-function wireTrendsTab(){
-  const sel = document.getElementById('trends-year');
-  const content = document.getElementById('trends-content');
-  if(sel && content){
-    const update = () => { content.innerHTML = renderTrendsContent(sel.value === 'all' ? null : Number(sel.value)); };
-    sel.addEventListener('change', update);
-    update();
-  }
-}
+      const yearSel = document.getElementById('team-detail-year');
+      const statCards = document.getElementById('team-stat-cards');
+      if(yearSel && statCards){
+        yearSel.addEventListener('change', () => {
+          statCards.innerHTML = renderTeamStatCards(key, yearSel.value === 'all' ? null : Number(yearSel.value));
+        });
+      }
+      const rivalList = document.getElementById('h2h-summary-list');
+      if(rivalList){
+        rivalList.addEventListener('click', (ev) => {
+          const li = ev.target.closest('li');
+          if(!li) return;
+          PENDING_RIVALRY = { a: key, b: li.dataset.rival };
+          showTab('h2h');
+        });
+      }
 
-function wireDraftTab(){
-  const sel = document.getElementById('draft-year');
-  const board = document.getElementById('draft-board');
-  if(sel && board){
-    const update = () => { board.innerHTML = renderDraftBoard(Number(sel.value)); };
-    sel.addEventListener('change', update);
-    update();
-  }
-}
-
-function wireTransactionsTab(){
-  const sel = document.getElementById('tx-year');
-  const content = document.getElementById('tx-content');
-  if(sel && content){
-    const update = () => {
-      const year = sel.value === 'all' ? null : Number(sel.value);
-      const { html } = renderTransactionSummary(year);
-      content.innerHTML = html + (year != null ? renderTransactionLog(year) : '');
-    };
-    sel.addEventListener('change', update);
-    update();
-  }
-}
-
-function wireAwardsTab(){
-  const sel = document.getElementById('awards-year');
-  const content = document.getElementById('awards-content');
-  if(sel && content){
-    const update = () => { content.innerHTML = renderAwardsContent(sel.value === 'all' ? null : Number(sel.value)); };
-    sel.addEventListener('change', update);
-    update();
-  }
-}
-
-const WIRING = {
-  season: wireSeasonTab, teams: wireTeamsTab, h2h: wireH2HTab, trends: wireTrendsTab,
-  draft: wireDraftTab, transactions: wireTransactionsTab, awards: wireAwardsTab,
-};
-
-let CURRENT_GROUP = 'overview';
-const LAST_SUBTAB = {};
-
-function showContent(groupId, subId){
-  LAST_SUBTAB[groupId] = subId;
-  const group = GROUPS[groupId];
-  if(group.subtabs){
-    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === subId));
-  }
-  document.getElementById('content').innerHTML = CONTENT_RENDERERS[subId]();
-  if(WIRING[subId]) WIRING[subId]();
-}
-
-function navigateTo(groupId, subId){
-  CURRENT_GROUP = groupId;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.group === groupId));
-  const group = GROUPS[groupId];
-  const subtabContainer = document.getElementById('subtabs-container');
-  if(group.subtabs){
-    subtabContainer.innerHTML = `<nav class="subtabs">${group.subtabs.map(s =>
-      `<button class="subtab-btn${s.id===subId?' active':''}" data-sub="${s.id}">${escapeHtml(s.label)}</button>`).join('')}</nav>`;
-    subtabContainer.querySelectorAll('.subtab-btn').forEach(btn => {
-      btn.addEventListener('click', () => showContent(groupId, btn.dataset.sub));
+      slot.scrollIntoView({ behavior:'smooth', block:'nearest' });
     });
-  } else {
-    subtabContainer.innerHTML = '';
   }
-  showContent(groupId, subId);
-}
-
-function showGroup(groupId){
-  const group = GROUPS[groupId];
-  const defaultSub = group.subtabs ? (LAST_SUBTAB[groupId] || group.subtabs[0].id) : 'overview';
-  navigateTo(groupId, defaultSub);
+  if(tab === 'h2h'){
+    const selA = document.getElementById('rivalry-a');
+    const selB = document.getElementById('rivalry-b');
+    const logEl = document.getElementById('rivalry-log');
+    if(selA && selB){
+      if(PENDING_RIVALRY){
+        selA.value = PENDING_RIVALRY.a;
+        selB.value = PENDING_RIVALRY.b;
+        PENDING_RIVALRY = null;
+      } else if(selB.options.length > 1){
+        selB.selectedIndex = 1;
+      }
+      const update = () => { logEl.innerHTML = renderRivalryLog(selA.value, selB.value); };
+      selA.addEventListener('change', update);
+      selB.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'trends'){
+    const sel = document.getElementById('trends-year');
+    const content = document.getElementById('trends-content');
+    if(sel && content){
+      const update = () => { content.innerHTML = renderTrendsContent(sel.value === 'all' ? null : Number(sel.value)); };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'draft'){
+    const sel = document.getElementById('draft-year');
+    const board = document.getElementById('draft-board');
+    if(sel && board){
+      const update = () => { board.innerHTML = renderDraftBoard(Number(sel.value)); };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'transactions'){
+    const sel = document.getElementById('tx-year');
+    const content = document.getElementById('tx-content');
+    if(sel && content){
+      const update = () => {
+        const year = sel.value === 'all' ? null : Number(sel.value);
+        const { html } = renderTransactionSummary(year);
+        content.innerHTML = html + (year != null ? renderTransactionLog(year) : '');
+      };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
+  if(tab === 'awards'){
+    const sel = document.getElementById('awards-year');
+    const content = document.getElementById('awards-content');
+    if(sel && content){
+      const update = () => { content.innerHTML = renderAwardsContent(sel.value === 'all' ? null : Number(sel.value)); };
+      sel.addEventListener('change', update);
+      update();
+    }
+  }
 }
 
 document.getElementById('tabs').addEventListener('click', (e) => {
   const btn = e.target.closest('.tab-btn');
-  if(btn) showGroup(btn.dataset.group);
+  if(btn) showTab(btn.dataset.tab);
 });
 
 async function init(){
@@ -2916,7 +2789,7 @@ async function init(){
     const { bundles, playersById } = await loadAll();
     processSeasons(bundles, playersById);
     renderMasthead();
-    showGroup('overview');
+    showTab('overview');
   } catch(err){
     console.error(err);
     document.getElementById('content').innerHTML = `
